@@ -125,6 +125,28 @@ Migrating off `localhost` surfaced that CORS/WebSocket origins were hardcoded in
 
 ---
 
+**7. major update on readme file**
+
+- **This 7th point was added long after the readme was built , this point is the most current update i'm putting in this readme file** — Multi-service booking is fully built. Here's what's in it:
+
+Backend — the real data model change
+
+New BookingServiceItem join entity: a Booking now has many of these instead of one direct Service link. Each item snapshots its own name/price/duration at booking time, so if you later rename or reprice a service, a customer's past booking still shows exactly what they actually paid for.
+PaymentService.createPaymentOrder() now takes a list of service IDs, validates every one of them actually belongs to the salon being booked (closes a real gap — without this check, a crafted request could mix services from two different salons into one booking), sums the price and duration, and creates one BookingServiceItem per selection.
+The queue engine needed zero logic changes — it already just consumes one combined duration number per entry, exactly as I flagged when we first discussed this. I added Booking.getCombinedServiceName() / getTotalDurationMinutes() helpers so that joining/summing logic lives in one place instead of being copy-pasted across three services.
+Found and removed something along the way: a completely dead POST /api/bookings endpoint that created a CONFIRMED booking with no payment involved at all. Never called by the frontend, so not currently exploitable, but extending it for multi-service would've meant preserving a real payment-bypass path for no reason — removed instead.
+
+Frontend
+
+Service cards are now toggle-select (glass-active highlight) instead of single-select.
+A small persistent strip appears once 2+ services are selected — "3 services selected · ₹550 · 75 min" — right under the picker, so there's constant feedback without scrolling down.
+Booking summary: now itemizes every selected service on its own line with its own price, then a bold Total Duration / Total Price beneath — exactly as we discussed, nothing hidden at the moment someone's about to pay.
+My Bookings: needed zero frontend changes — since the backend now sends an already-joined string ("Men's Haircut + Men's Beard") into the same serviceName field the UI already displays with truncate, it just works.
+
+Given the size of this change (new entity, removed a live endpoint, rewired the entire selection state), this is the one I'd most want you to actually click through end-to-end before trusting — select 2-3 services, confirm the summary and total look right, complete a real test payment, and check both the success ticket and My Bookings show the combined name correctly..
+
+---
+
 
 
 
