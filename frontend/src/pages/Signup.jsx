@@ -32,20 +32,20 @@ export default function Signup() {
   };
 
   return (
-    <div className="ambient-bg min-h-screen flex items-center justify-center p-4 py-10 font-body">
-      <div className="glass rounded-[2rem] shadow-2xl p-8 sm:p-10 w-full max-w-md">
+    <div className="bg-paper min-h-screen flex items-center justify-center p-4 py-10 font-body">
+      <div className="bg-paper-card border border-ink/10 rounded-[2rem] shadow-2xl p-8 sm:p-10 w-full max-w-md">
         <div className="text-center mb-7">
           <div className="w-14 h-14 bg-rose rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-rose/30 rotate-3">
             <Scissors size={24} className="text-white -rotate-3" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-display font-semibold text-paper">
+          <h1 className="text-3xl sm:text-4xl font-display font-semibold text-ink">
             Join SalonQueue
           </h1>
-          <p className="text-paper/50 mt-1.5 text-sm">Create your account in under a minute</p>
+          <p className="text-ink/50 mt-1.5 text-sm">Create your account in under a minute</p>
         </div>
 
         {error && (
-          <div className="glass border-rose/30 text-rose px-4 py-3 rounded-xl mb-5 flex items-center gap-2 text-sm">
+          <div className="bg-rose/10 border border-rose/30 text-rose px-4 py-3 rounded-xl mb-5 flex items-center gap-2 text-sm">
             <AlertCircle size={16} className="flex-shrink-0" />
             {error}
           </div>
@@ -53,45 +53,45 @@ export default function Signup() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-paper/50 uppercase tracking-wide mb-2">Name</label>
+            <label className="block text-xs font-bold text-ink/50 uppercase tracking-wide mb-2">Name</label>
             <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-paper/35" size={19} />
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/35" size={19} />
               <input type="text" value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
-                className="glass-strong w-full pl-11 pr-4 py-3.5 rounded-xl focus:border-rose/60 focus:outline-none transition-colors text-sm text-paper placeholder:text-paper/35"
+                className="bg-paper-card border border-ink/15 w-full pl-11 pr-4 py-3.5 rounded-xl focus:border-rose/60 focus:outline-none transition-colors text-sm text-ink placeholder:text-ink/35"
                 placeholder="Your full name" required />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-paper/50 uppercase tracking-wide mb-2">Email</label>
+            <label className="block text-xs font-bold text-ink/50 uppercase tracking-wide mb-2">Email</label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-paper/35" size={19} />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/35" size={19} />
               <input type="email" value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
-                className="glass-strong w-full pl-11 pr-4 py-3.5 rounded-xl focus:border-rose/60 focus:outline-none transition-colors text-sm text-paper placeholder:text-paper/35"
+                className="bg-paper-card border border-ink/15 w-full pl-11 pr-4 py-3.5 rounded-xl focus:border-rose/60 focus:outline-none transition-colors text-sm text-ink placeholder:text-ink/35"
                 required />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-paper/50 uppercase tracking-wide mb-2">Phone</label>
+            <label className="block text-xs font-bold text-ink/50 uppercase tracking-wide mb-2">Phone</label>
             <div className="relative">
-              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-paper/35" size={19} />
+              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/35" size={19} />
               <input type="tel" value={formData.phone}
                 onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                className="glass-strong w-full pl-11 pr-4 py-3.5 rounded-xl focus:border-rose/60 focus:outline-none transition-colors text-sm text-paper placeholder:text-paper/35"
+                className="bg-paper-card border border-ink/15 w-full pl-11 pr-4 py-3.5 rounded-xl focus:border-rose/60 focus:outline-none transition-colors text-sm text-ink placeholder:text-ink/35"
                 placeholder="10-digit number" pattern="[0-9]{10}" required />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-paper/50 uppercase tracking-wide mb-2">Password</label>
+            <label className="block text-xs font-bold text-ink/50 uppercase tracking-wide mb-2">Password</label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-paper/35" size={19} />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/35" size={19} />
               <input type="password" value={formData.password}
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
-                className="glass-strong w-full pl-11 pr-4 py-3.5 rounded-xl focus:border-rose/60 focus:outline-none transition-colors text-sm text-paper placeholder:text-paper/35"
+                className="bg-paper-card border border-ink/15 w-full pl-11 pr-4 py-3.5 rounded-xl focus:border-rose/60 focus:outline-none transition-colors text-sm text-ink placeholder:text-ink/35"
                 placeholder="Min 6 characters" required />
             </div>
           </div>
@@ -104,7 +104,7 @@ export default function Signup() {
         </form>
 
         <div className="mt-7 text-center">
-          <p className="text-paper/50 text-sm">
+          <p className="text-ink/50 text-sm">
             Already have an account?{' '}
             <Link to="/login" className="text-rose font-bold hover:text-rose-dark transition-colors">Login</Link>
           </p>

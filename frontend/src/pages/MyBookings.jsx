@@ -19,9 +19,9 @@ function ReviewModal({ salonName, onClose, onSubmit }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 font-body">
-      <div className="glass rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-7">
-        <h2 className="text-xl font-display font-semibold text-paper mb-1">Leave a Review</h2>
-        <p className="text-paper/50 text-sm mb-5">{salonName}</p>
+      <div className="bg-paper-card border border-ink/10 rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-7">
+        <h2 className="text-xl font-display font-semibold text-ink mb-1">Leave a Review</h2>
+        <p className="text-ink/50 text-sm mb-5">{salonName}</p>
 
         {/* Star rating */}
         <div className="flex gap-2 mb-5 justify-center">
@@ -37,7 +37,7 @@ function ReviewModal({ salonName, onClose, onSubmit }) {
                 className={`transition-colors ${
                   star <= (hovered || rating)
                     ? 'fill-brass text-brass'
-                    : 'text-white/15'
+                    : 'text-ink/15'
                 }`}
               />
             </button>
@@ -45,7 +45,7 @@ function ReviewModal({ salonName, onClose, onSubmit }) {
         </div>
 
         {rating > 0 && (
-          <p className="text-center text-sm font-semibold text-paper/60 mb-4">
+          <p className="text-center text-sm font-semibold text-ink/60 mb-4">
             {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][rating]}
           </p>
         )}
@@ -56,12 +56,12 @@ function ReviewModal({ salonName, onClose, onSubmit }) {
           onChange={e => setComment(e.target.value)}
           placeholder="Share your experience (optional)…"
           rows={3}
-          className="glass-strong w-full rounded-xl px-4 py-3 text-sm text-paper placeholder-paper/35 focus:border-rose/60 focus:outline-none resize-none mb-4"
+          className="bg-paper-card border border-ink/15 w-full rounded-xl px-4 py-3 text-sm text-ink placeholder:text-ink/35 focus:border-rose/60 focus:outline-none resize-none mb-4"
         />
 
         <div className="flex gap-3">
           <button onClick={onClose}
-            className="flex-1 py-3 rounded-xl border-2 border-white/15 text-paper/60 font-semibold text-sm hover:bg-white/5 transition">
+            className="flex-1 py-3 rounded-xl border-2 border-ink/15 text-ink/60 font-semibold text-sm hover:bg-ink/5 transition">
             Cancel
           </button>
           <button onClick={handleSubmit} disabled={loading || rating === 0}
@@ -164,14 +164,14 @@ export default function MyBookings() {
   const statusConfig = {
     CONFIRMED:       { bg: 'bg-rose/20',   text: 'text-rose',       icon: AlertCircle,  label: 'Confirmed'       },
     IN_PROGRESS:     { bg: 'bg-brass/20',  text: 'text-brass',      icon: Clock,        label: 'In Progress'     },
-    COMPLETED:       { bg: 'bg-sage/20',   text: 'text-sage-bright',icon: CheckCircle,  label: 'Completed'       },
-    CANCELLED:       { bg: 'bg-white/10',  text: 'text-paper/60',   icon: XCircle,      label: 'Cancelled'       },
-    NO_SHOW:         { bg: 'bg-white/10',  text: 'text-paper/60',   icon: XCircle,      label: 'No Show'         },
-    PENDING_PAYMENT: { bg: 'bg-white/8',   text: 'text-paper/40',   icon: Clock,        label: 'Pending Payment' },
+    COMPLETED:       { bg: 'bg-sage/20',   text: 'text-sage',icon: CheckCircle,  label: 'Completed'       },
+    CANCELLED:       { bg: 'bg-ink/10',  text: 'text-ink/60',   icon: XCircle,      label: 'Cancelled'       },
+    NO_SHOW:         { bg: 'bg-ink/10',  text: 'text-ink/60',   icon: XCircle,      label: 'No Show'         },
+    PENDING_PAYMENT: { bg: 'bg-ink/8',   text: 'text-ink/40',   icon: Clock,        label: 'Pending Payment' },
   };
 
   const StatusBadge = ({ status }) => {
-    const cfg = statusConfig[status] || { bg: 'bg-white/8', text: 'text-paper/40', icon: AlertCircle, label: status };
+    const cfg = statusConfig[status] || { bg: 'bg-ink/8', text: 'text-ink/40', icon: AlertCircle, label: status };
     const Icon = cfg.icon;
     return (
       <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold flex-shrink-0 ${cfg.bg} ${cfg.text}`}>
@@ -194,17 +194,17 @@ export default function MyBookings() {
 
   if (loading) {
     return (
-      <div className="ambient-bg min-h-screen flex items-center justify-center font-body">
+      <div className="bg-paper min-h-screen flex items-center justify-center font-body">
         <div className="text-center">
           <div className="w-12 h-12 border-[3px] border-rose/25 border-t-rose rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-paper/50 font-display">Loading bookings…</p>
+          <p className="text-ink/50 font-display">Loading bookings…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="ambient-bg min-h-screen font-body">
+    <div className="bg-paper min-h-screen font-body">
       {/* ── Review Modal ── */}
       {reviewModal?.open && (
         <ReviewModal
@@ -215,13 +215,13 @@ export default function MyBookings() {
       )}
       <div className="max-w-2xl mx-auto px-4 py-6 sm:py-8">
 
-        <h1 className="text-2xl sm:text-3xl font-display font-semibold text-paper mb-6">My Bookings</h1>
+        <h1 className="text-2xl sm:text-3xl font-display font-semibold text-ink mb-6">My Bookings</h1>
 
         {bookings.length === 0 ? (
-          <div className="glass rounded-2xl p-10 sm:p-12 text-center">
-            <Calendar size={44} className="mx-auto text-paper/25 mb-3" />
-            <p className="text-lg font-display font-semibold text-paper/70 mb-1">No bookings yet</p>
-            <p className="text-paper/40 text-sm mb-5">Find a salon and book your slot</p>
+          <div className="bg-paper-card border border-ink/10 rounded-2xl p-10 sm:p-12 text-center">
+            <Calendar size={44} className="mx-auto text-ink/25 mb-3" />
+            <p className="text-lg font-display font-semibold text-ink/70 mb-1">No bookings yet</p>
+            <p className="text-ink/40 text-sm mb-5">Find a salon and book your slot</p>
             <button
               onClick={() => navigate('/home')}
               className="bg-rose hover:bg-rose-dark text-white px-6 py-3 rounded-xl font-bold transition shadow-md shadow-rose/20"
@@ -234,16 +234,16 @@ export default function MyBookings() {
             {bookings.map((booking) => (
               <div
                 key={booking.id}
-                className="glass-lite rounded-2xl overflow-hidden"
+                className="bg-paper-card border border-ink/10 rounded-2xl overflow-hidden"
               >
                 {/* Card header */}
                 <div className="px-4 sm:px-5 pt-5 pb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-display font-semibold text-paper text-base sm:text-lg truncate">
+                    <p className="font-display font-semibold text-ink text-base sm:text-lg truncate">
                       {booking.salonName || 'Salon'}
                     </p>
                     {booking.salonAddress && (
-                      <p className="text-xs text-paper/45 flex items-center gap-1 mt-0.5 truncate">
+                      <p className="text-xs text-ink/45 flex items-center gap-1 mt-0.5 truncate">
                         <MapPin size={12} className="flex-shrink-0" /> {booking.salonAddress}
                       </p>
                     )}
@@ -254,23 +254,23 @@ export default function MyBookings() {
                 {/* Key details row */}
                 <div className="px-4 sm:px-5 pb-4 grid grid-cols-3 gap-2 sm:gap-3 text-sm">
                   <div className="min-w-0">
-                    <p className="text-[11px] text-paper/35 mb-0.5">Booking Code</p>
+                    <p className="text-[11px] text-ink/35 mb-0.5">Booking Code</p>
                     <p className="font-mono font-bold text-rose flex items-center gap-1 text-xs sm:text-sm truncate">
                       <Tag size={12} className="flex-shrink-0" />{booking.bookingCode}
                     </p>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[11px] text-paper/35 mb-0.5">Service</p>
-                    <p className="font-semibold text-paper text-xs sm:text-sm truncate">{booking.serviceName}</p>
+                    <p className="text-[11px] text-ink/35 mb-0.5">Service</p>
+                    <p className="font-semibold text-ink text-xs sm:text-sm truncate">{booking.serviceName}</p>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[11px] text-paper/35 mb-0.5">Amount</p>
-                    <p className="font-mono font-bold text-sage-bright text-xs sm:text-sm">₹{booking.amount}</p>
+                    <p className="text-[11px] text-ink/35 mb-0.5">Amount</p>
+                    <p className="font-mono font-bold text-sage text-xs sm:text-sm">₹{booking.amount}</p>
                   </div>
                 </div>
 
                 {/* Booked on */}
-                <div className="px-4 sm:px-5 pb-4 text-xs sm:text-sm text-paper/40 flex items-center gap-1">
+                <div className="px-4 sm:px-5 pb-4 text-xs sm:text-sm text-ink/40 flex items-center gap-1">
                   <Calendar size={13} className="flex-shrink-0" />
                   Booked on {formatDate(booking.scheduledTime || booking.createdAt)}
                 </div>
@@ -278,21 +278,21 @@ export default function MyBookings() {
                 {/* ── CONFIRMED: arrival time strip — ticket motif, same
                      visual family as the booking summary on SalonDetails ── */}
                 {booking.status === 'CONFIRMED' && (
-                  <div className="border-t-2 border-dashed border-white/10">
-                    <div className="glass-lite px-4 sm:px-5 py-4">
+                  <div className="border-t-2 border-dashed border-ink/10">
+                    <div className="bg-paper-card border border-ink/10 px-4 sm:px-5 py-4">
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
                           <Clock size={20} className="text-rose flex-shrink-0" />
                           <div className="min-w-0">
-                            <p className="text-[11px] text-paper/50 font-medium uppercase tracking-wide">Estimated Arrival</p>
+                            <p className="text-[11px] text-ink/50 font-medium uppercase tracking-wide">Estimated Arrival</p>
                             {getWaitMinutes(booking) === null ? (
-                              <p className="text-sm text-paper/40">Loading…</p>
+                              <p className="text-sm text-ink/40">Loading…</p>
                             ) : (
                               <>
-                                <p className="text-xl sm:text-2xl font-mono font-bold text-paper">
+                                <p className="text-xl sm:text-2xl font-mono font-bold text-ink">
                                   {formatArrivalTime(booking)}
                                 </p>
-                                <p className="text-xs text-paper/45 mt-0.5">
+                                <p className="text-xs text-ink/45 mt-0.5">
                                   ≈ {getWaitMinutes(booking)} min wait
                                 </p>
                               </>
@@ -312,7 +312,7 @@ export default function MyBookings() {
                           {booking.salonId && (
                             <button
                               onClick={() => navigate(`/salon/${booking.salonId}`)}
-                              className="text-xs text-paper/40 hover:text-paper/70 transition"
+                              className="text-xs text-ink/40 hover:text-ink/70 transition"
                             >
                               View queue →
                             </button>
@@ -334,7 +334,7 @@ export default function MyBookings() {
                 {/* ── COMPLETED strip ── */}
                 {booking.status === 'COMPLETED' && (
                   <div className="border-t border-sage/25 bg-sage/15 px-4 sm:px-5 py-3 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-sage-bright text-xs sm:text-sm font-semibold min-w-0">
+                    <div className="flex items-center gap-2 text-sage text-xs sm:text-sm font-semibold min-w-0">
                       <CheckCircle size={16} className="flex-shrink-0" />
                       <span className="truncate">Service completed — thank you!</span>
                     </div>
@@ -352,7 +352,7 @@ export default function MyBookings() {
                       </button>
                     )}
                     {reviewStatuses[booking.bookingCode] === 'already_reviewed' && (
-                      <span className="flex items-center gap-1 text-xs text-sage-bright font-medium flex-shrink-0">
+                      <span className="flex items-center gap-1 text-xs text-sage font-medium flex-shrink-0">
                         <Star size={12} className="fill-brass text-brass" /> Reviewed
                       </span>
                     )}
@@ -361,7 +361,7 @@ export default function MyBookings() {
 
                 {/* ── CANCELLED / NO_SHOW strip ── */}
                 {(booking.status === 'CANCELLED' || booking.status === 'NO_SHOW') && (
-                  <div className="border-t border-white/10 bg-white/5 px-4 sm:px-5 py-3 flex items-center justify-between text-paper/60 text-xs sm:text-sm font-semibold">
+                  <div className="border-t border-ink/10 bg-ink/5 px-4 sm:px-5 py-3 flex items-center justify-between text-ink/60 text-xs sm:text-sm font-semibold">
                     <div className="flex items-center gap-2">
                       <XCircle size={16} className="flex-shrink-0" />
                       {booking.status === 'CANCELLED' ? 'Booking cancelled' : 'Marked as no-show'}
@@ -373,7 +373,7 @@ export default function MyBookings() {
                       && booking.cancellationReason && (
                       <div className="relative group flex-shrink-0">
                         {/* Exclamation trigger */}
-                        <div className="w-5 h-5 rounded-full bg-white/15 text-paper/70 flex items-center justify-center cursor-help text-xs font-bold select-none">
+                        <div className="w-5 h-5 rounded-full bg-ink/15 text-ink/70 flex items-center justify-center cursor-help text-xs font-bold select-none">
                           !
                         </div>
 

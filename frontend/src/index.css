@@ -16,8 +16,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
   /* Matches the color-scheme meta tag in index.html — belt-and-suspenders
      so both the initial HTML parse and the CSS engine agree this page is
-     intentionally dark and shouldn't be auto-recolored by the browser. */
-  color-scheme: dark;
+     light, so mobile browsers with an "auto dark theme" heuristic (Chrome,
+     Samsung Internet, MIUI/HyperOS) don't try to recolor it. */
+  color-scheme: light;
 }
 
 /* ── Ticket-stub signature element ──────────────────────────────────────────
@@ -44,78 +45,6 @@ body {
 }
 .ticket-notch::before { left: 0; }
 .ticket-notch::after { right: 0; }
-
-/* ── Glassmorphism system (customer-facing pages) ────────────────────────────
-   Frosted glass tiles floating over a dark, colorful ambient background —
-   glass only reads as "glass" when there's something busy behind it to
-   blur, so the customer-facing pages now sit on .ambient-bg instead of the
-   old flat paper background. */
-
-.ambient-bg {
-  background:
-    radial-gradient(circle at 12% 15%, rgba(232,66,95,0.35), transparent 42%),
-    radial-gradient(circle at 88% 10%, rgba(185,151,63,0.28), transparent 42%),
-    radial-gradient(circle at 50% 95%, rgba(75,99,85,0.4), transparent 48%),
-    radial-gradient(circle at 92% 85%, rgba(232,66,95,0.22), transparent 40%),
-    #1A1517;
-  background-attachment: fixed;
-}
-
-/* Standard glass tile — most cards, panels, nav */
-.glass {
-  background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.14);
-  /* Hints the browser to give this its own compositing layer up front
-     rather than discovering it needs one mid-scroll — cheap here because
-     .glass is now reserved for a handful of large, mostly-static panels
-     per page rather than every repeated list item (see .glass-lite below). */
-  will-change: backdrop-filter;
-}
-
-/* Stronger glass — content-dense areas that need more legibility
-   (service lists, form fields, anywhere text-heavy) */
-.glass-strong {
-  background: rgba(255,255,255,0.14);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255,255,255,0.18);
-  will-change: backdrop-filter;
-}
-
-/* Selected/active glass state — used instead of a solid fill so selection
-   still reads as "glass", just brighter */
-.glass-active {
-  background: rgba(232,66,95,0.22);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(232,66,95,0.4);
-  will-change: backdrop-filter;
-}
-
-/* ── Lightweight glass — NO backdrop-filter ──────────────────────────────────
-   Same visual family as .glass (translucent, light border) but without the
-   blur itself, for anywhere a glass tile repeats many times in a scrolling
-   list: salon cards, service cards in the horizontal carousel, queue
-   entries, review cards, booking cards. backdrop-filter is one of the most
-   GPU-expensive CSS properties to composite, and the cost multiplies with
-   every simultaneous instance on screen — a handful of large panels can
-   afford real blur, but a scrolling list of a dozen small cards each doing
-   their own blur is exactly the pattern that causes visible scroll jank on
-   mid/budget-GPU Android phones (confirmed: smooth on iOS and newer/
-   flagship Android, laggy on older/budget Android — classic backdrop-filter
-   compositing cost, not a bug in the app logic). The flat tint below
-   approximates the same "translucent layer" look at a glance without the
-   per-frame blur computation. */
-.glass-lite {
-  background: rgba(58,47,48,0.55);
-  border: 1px solid rgba(255,255,255,0.12);
-}
-.glass-lite-active {
-  background: rgba(232,66,95,0.28);
-  border: 1px solid rgba(232,66,95,0.45);
-}
 
 /* ── Hide scrollbar on horizontal-swipe strips ──────────────────────────────
    Used on the category picker and service-card carousel — the content

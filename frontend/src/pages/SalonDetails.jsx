@@ -5,7 +5,7 @@ import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import {
   Clock, Star, Users, ArrowLeft,
-  Bell, CheckCircle, AlertCircle, Loader, CreditCard, Shield,
+  CheckCircle, AlertCircle, Loader, CreditCard, Shield,
   Scissors, User, Palette, Sparkles, Hand, Wind, MoreHorizontal, LayoutGrid, Check
 } from 'lucide-react';
 
@@ -280,40 +280,40 @@ export default function SalonDetails() {
   // ── Success screen ────────────────────────────────────────────────────────
   if (payState === PAY_STATE.SUCCESS && successBooking) {
     return (
-      <div className="ambient-bg min-h-screen flex items-center justify-center p-4 font-body">
+      <div className="bg-paper min-h-screen flex items-center justify-center p-4 font-body">
         <div className="max-w-md w-full">
           <div className="text-center mb-6">
             <div className="w-16 h-16 bg-sage rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-sage/30">
               <CheckCircle size={32} className="text-white" />
             </div>
-            <h1 className="text-3xl font-display font-semibold text-paper mb-1">Booking Confirmed</h1>
-            <p className="text-paper/50 text-sm">Your slot is secured — here's your ticket</p>
+            <h1 className="text-3xl font-display font-semibold text-ink mb-1">Booking Confirmed</h1>
+            <p className="text-ink/50 text-sm">Your slot is secured — here's your ticket</p>
           </div>
 
           {/* ── Ticket stub ── perforated-token confirmation, the app's
               digital version of the paper number every salon hands out */}
-          <div className="glass rounded-2xl shadow-2xl overflow-hidden">
+          <div className="bg-paper-card border border-ink/10 rounded-2xl shadow-2xl overflow-hidden">
             <div className="p-6 sm:p-7 text-center">
-              <p className="text-xs font-bold text-paper/40 uppercase tracking-widest mb-1">Booking Code</p>
+              <p className="text-xs font-bold text-ink/40 uppercase tracking-widest mb-1">Booking Code</p>
               <p className="text-4xl font-mono font-bold text-rose tracking-wider">{successBooking.bookingCode}</p>
             </div>
 
             <div className="flex items-center px-6">
-              <div className="flex-1 border-t-2 border-dashed border-white/15 text-white/25 ticket-notch" />
+              <div className="flex-1 border-t-2 border-dashed border-ink/15 text-ink/25 ticket-notch" />
             </div>
 
             <div className="p-6 sm:p-7 space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-paper/50">Salon</span>
-                <span className="font-semibold text-paper">{successBooking.salonName}</span>
+                <span className="text-ink/50">Salon</span>
+                <span className="font-semibold text-ink">{successBooking.salonName}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-paper/50">Service</span>
-                <span className="font-semibold text-paper">{successBooking.serviceName}</span>
+                <span className="text-ink/50">Service</span>
+                <span className="font-semibold text-ink">{successBooking.serviceName}</span>
               </div>
-              <div className="flex justify-between pt-3 border-t border-dashed border-white/10">
-                <span className="text-paper/50">Amount Paid</span>
-                <span className="font-bold text-sage-bright text-lg font-mono">₹{successBooking.amount}</span>
+              <div className="flex justify-between pt-3 border-t border-dashed border-ink/10">
+                <span className="text-ink/50">Amount Paid</span>
+                <span className="font-bold text-sage text-lg font-mono">₹{successBooking.amount}</span>
               </div>
             </div>
           </div>
@@ -330,10 +330,10 @@ export default function SalonDetails() {
   // ── Loading / not found ───────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="ambient-bg min-h-screen flex items-center justify-center font-body">
+      <div className="bg-paper min-h-screen flex items-center justify-center font-body">
         <div className="text-center">
           <div className="w-12 h-12 border-[3px] border-rose/25 border-t-rose rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-paper/50 font-display">Loading salon details…</p>
+          <p className="text-ink/50 font-display">Loading salon details…</p>
         </div>
       </div>
     );
@@ -341,8 +341,8 @@ export default function SalonDetails() {
 
   if (!salon) {
     return (
-      <div className="ambient-bg min-h-screen flex items-center justify-center font-body">
-        <p className="text-2xl font-display font-semibold text-paper/50">Salon not found</p>
+      <div className="bg-paper min-h-screen flex items-center justify-center font-body">
+        <p className="text-2xl font-display font-semibold text-ink/50">Salon not found</p>
       </div>
     );
   }
@@ -353,9 +353,6 @@ export default function SalonDetails() {
   const waitMinutes        = salon?.estimatedWaitMinutes ?? getTotalWaitMinutes();
   const estimatedArrivalMs = currentTime.getTime() + waitMinutes * 60000;
   const chairStatus        = getChairStatus();
-  // Prefer the backend's own queue count over counting the locally-fetched
-  // queue array — keeps this in lockstep with the stats strip above.
-  const yourPositionInLine = (salon?.currentQueueSize ?? queue.filter(e => e.status === 'WAITING').length) + 1;
   const isPaymentInProgress = [PAY_STATE.CREATING, PAY_STATE.PROCESSING, PAY_STATE.VERIFYING].includes(payState);
   // Summed across every selected service — lets a customer combine
   // services (Haircut + Beard + Color) into one booking instead of the
@@ -371,42 +368,41 @@ export default function SalonDetails() {
     : services.filter(s => s.category === selectedCategory);
 
   return (
-    <div className="ambient-bg min-h-screen font-body">
+    <div className="bg-paper min-h-screen font-body">
 
       <div className="max-w-6xl mx-auto px-4 pt-6 pb-8 sm:pt-8">
         <button onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-paper/60 hover:text-paper font-semibold mb-6 transition text-sm">
+          className="flex items-center gap-2 text-ink/60 hover:text-ink font-semibold mb-6 transition text-sm">
           <ArrowLeft size={18} /> Back to Search
         </button>
 
-        {/* Salon header — glass panel instead of a solid dark band, since
-            the whole page is dark now there's no need for a separate block.
+        {/* Salon header — plain card panel instead of a solid band.
             Address/phone/email removed per request — the customer already
             saw the address on the salon list before tapping in, and this
             keeps the header short so Select a Service starts sooner. */}
-        <div className="glass rounded-2xl sm:rounded-3xl p-5 sm:p-7 mb-6">
+        <div className="bg-paper-card border border-ink/10 rounded-2xl sm:rounded-3xl p-4 sm:p-7 mb-4">
           <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
             <div>
-              <h1 className="text-3xl sm:text-4xl font-display font-semibold text-paper mb-2">{salon.name}</h1>
-              <div className="flex items-center gap-2 text-paper/60 text-sm">
+              <h1 className="text-3xl sm:text-4xl font-display font-semibold text-ink mb-2">{salon.name}</h1>
+              <div className="flex items-center gap-2 text-ink/60 text-sm">
                 <Clock size={16} className="text-rose flex-shrink-0" /><span>{salon.openingTime} - {salon.closingTime}</span>
               </div>
             </div>
             <div className="flex sm:flex-col items-center sm:items-end gap-2">
               <div className="flex items-center gap-1.5 text-brass">
                 <Star size={22} fill="currentColor" />
-                <span className="text-2xl sm:text-3xl font-display font-semibold text-paper">{Number(salon.rating || 0).toFixed(1)}</span>
+                <span className="text-2xl sm:text-3xl font-display font-semibold text-ink">{Number(salon.rating || 0).toFixed(1)}</span>
               </div>
-              <div className="text-sm text-paper/50">{salon.totalReviews || 0} reviews</div>
+              <div className="text-sm text-ink/50">{salon.totalReviews || 0} reviews</div>
             </div>
           </div>
 
-          {/* Stats strip — now inline inside the same glass panel instead of
-              a separate card, one glass surface instead of stacking two */}
-          <div className="grid grid-cols-3 divide-x divide-white/10 mt-5 pt-5 border-t border-white/10">
+          {/* Stats strip — inline inside the same card panel instead of
+              a separate card, one surface instead of stacking two */}
+          <div className="grid grid-cols-3 divide-x divide-ink/10 mt-4 pt-4 border-t border-ink/10">
             <div className="text-center">
               <div className="text-xl sm:text-2xl font-display font-semibold text-rose">{salon.currentQueueSize ?? queue.length}</div>
-              <div className="text-[11px] sm:text-xs text-paper/45 font-medium mt-0.5">In Queue</div>
+              <div className="text-[11px] sm:text-xs text-ink/45 font-medium mt-0.5">In Queue</div>
             </div>
             <div className="text-center">
               {/* Gentle pulse — Tailwind's built-in animate-pulse is a slow
@@ -414,34 +410,34 @@ export default function SalonDetails() {
                   draws the eye to the number that matters most without
                   being obnoxious about it. */}
               <div className="text-xl sm:text-2xl font-display font-semibold text-brass animate-pulse">{waitMinutes} min</div>
-              <div className="text-[11px] sm:text-xs text-paper/45 font-medium mt-0.5">Total Wait</div>
+              <div className="text-[11px] sm:text-xs text-ink/45 font-medium mt-0.5">Total Wait</div>
             </div>
             <div className="text-center">
-              <div className="text-xl sm:text-2xl font-display font-semibold text-sage-bright">{salon.totalChairs || 1}</div>
-              <div className="text-[11px] sm:text-xs text-paper/45 font-medium mt-0.5">Chair{(salon.totalChairs || 1) > 1 ? 's' : ''}</div>
+              <div className="text-xl sm:text-2xl font-display font-semibold text-sage">{salon.totalChairs || 1}</div>
+              <div className="text-[11px] sm:text-xs text-ink/45 font-medium mt-0.5">Chair{(salon.totalChairs || 1) > 1 ? 's' : ''}</div>
             </div>
           </div>
         </div>
 
         {/* Services + Queue */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 mb-6">
 
           {/* Services + booking */}
-          <div className="lg:col-span-2 glass rounded-2xl p-5 sm:p-6">
-            <h2 className="text-xl sm:text-2xl font-display font-semibold text-paper mb-3 sm:mb-4">Select a Service</h2>
+          <div className="lg:col-span-2 bg-paper-card border border-ink/10 rounded-2xl p-4 sm:p-6">
+            <h2 className="text-xl sm:text-2xl font-display font-semibold text-ink mb-3">Select a Service</h2>
 
             {servicesLoading ? (
-              <div className="text-center py-12 text-paper/40">
+              <div className="text-center py-12 text-ink/40">
                 <div className="w-8 h-8 border-[3px] border-rose/25 border-t-rose rounded-full animate-spin mx-auto mb-2" />
                 Loading services…
               </div>
             ) : services.length === 0 ? (
-              <div className="text-center py-12 text-paper/40">
+              <div className="text-center py-12 text-ink/40">
                 <AlertCircle size={36} className="mx-auto mb-2 opacity-40" />
                 <p>No services available</p>
               </div>
             ) : (
-              <div className="mb-6">
+              <div className="mb-4">
 
                 {/* Category picker — circular icons, scrolls sideways.
                     Only rendered when there's more than one category to
@@ -461,11 +457,11 @@ export default function SalonDetails() {
                           className="flex flex-col items-center gap-1 flex-shrink-0 snap-start w-12"
                         >
                           <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                            active ? 'bg-rose text-white shadow-md shadow-rose/25 scale-105' : 'bg-white/8 text-paper/50'
+                            active ? 'bg-rose text-white shadow-md shadow-rose/25 scale-105' : 'bg-ink/8 text-ink/50'
                           }`}>
                             <Icon size={15} />
                           </div>
-                          <span className={`text-[9px] font-semibold text-center leading-tight ${active ? 'text-rose' : 'text-paper/50'}`}>
+                          <span className={`text-[9px] font-semibold text-center leading-tight ${active ? 'text-rose' : 'text-ink/50'}`}>
                             {meta.label}
                           </span>
                         </button>
@@ -493,7 +489,7 @@ export default function SalonDetails() {
                         onClick={() => toggleService(service)}
                         disabled={isPaymentInProgress}
                         className={`relative flex flex-col items-start text-left p-2.5 rounded-xl transition-all snap-start w-[112px] sm:w-[136px] ${
-                          active ? 'glass-lite-active' : 'glass-lite hover:bg-white/10'
+                          active ? 'border border-rose bg-rose-light/70' : 'bg-paper-card border border-ink/10 hover:bg-ink/10'
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {active && (
@@ -502,14 +498,14 @@ export default function SalonDetails() {
                           </div>
                         )}
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1.5 ${
-                          active ? 'bg-rose text-white' : 'bg-white/10 text-paper/60'
+                          active ? 'bg-rose text-white' : 'bg-ink/10 text-ink/60'
                         }`}>
                           <Icon size={12} />
                         </div>
-                        <div className="font-display font-semibold text-paper text-[11px] leading-snug mb-1 line-clamp-2">
+                        <div className="font-display font-semibold text-ink text-[11px] leading-snug mb-1 line-clamp-2">
                           {service.name}
                         </div>
-                        <div className="text-[9px] text-paper/40 mb-1">{service.durationMinutes} min</div>
+                        <div className="text-[9px] text-ink/40 mb-1">{service.durationMinutes} min</div>
                         <div className="mt-auto text-sm font-mono font-bold text-rose">₹{service.price}</div>
                       </button>
                     );
@@ -520,7 +516,7 @@ export default function SalonDetails() {
                     than fits in view, so it doesn't clutter a salon with
                     just 2-3 services. */}
                 {filteredServices.length > 4 && (
-                  <p className="text-[11px] text-paper/35 text-center mt-1">← swipe for more →</p>
+                  <p className="text-[11px] text-ink/35 text-center mt-1">← swipe for more →</p>
                 )}
 
                 {/* Persistent selection feedback — tap a couple more
@@ -530,9 +526,9 @@ export default function SalonDetails() {
                     more than one service selected — with just one, the
                     price is already right there on the card itself. */}
                 {selectedServices.length > 1 && (
-                  <div className="flex items-center justify-between glass-lite rounded-xl px-3.5 py-2.5 mt-3">
-                    <span className="text-xs text-paper/70">
-                      <span className="font-bold text-paper">{selectedServices.length} services</span> selected
+                  <div className="flex items-center justify-between bg-paper-card border border-ink/10 rounded-xl px-3.5 py-2.5 mt-3">
+                    <span className="text-xs text-ink/70">
+                      <span className="font-bold text-ink">{selectedServices.length} services</span> selected
                     </span>
                     <span className="text-sm font-mono font-bold text-rose">₹{totalPrice} · {totalDuration} min</span>
                   </div>
@@ -541,12 +537,12 @@ export default function SalonDetails() {
             )}
 
             {selectedServices.length > 0 && (
-              <div className="glass-strong rounded-2xl overflow-hidden">
-                <div className="p-5 sm:p-6">
-                  <h3 className="text-base font-display font-semibold text-paper mb-4">
+              <div className="bg-paper-card border border-ink/15 rounded-2xl overflow-hidden">
+                <div className="p-4 sm:p-6">
+                  <h3 className="text-base font-display font-semibold text-ink mb-3">
                     Booking Summary
                     {selectedServices.length > 1 && (
-                      <span className="text-paper/40 font-body font-normal text-xs ml-1.5">({selectedServices.length} services)</span>
+                      <span className="text-ink/40 font-body font-normal text-xs ml-1.5">({selectedServices.length} services)</span>
                     )}
                   </h3>
 
@@ -559,70 +555,40 @@ export default function SalonDetails() {
                   <div className="space-y-2 text-sm mb-3">
                     {selectedServices.map(s => (
                       <div key={s.id} className="flex justify-between items-center gap-3">
-                        <span className="text-paper/70 truncate">{s.name}</span>
-                        <span className="font-mono font-semibold text-paper flex-shrink-0">₹{s.price}</span>
+                        <span className="text-ink/70 truncate">{s.name}</span>
+                        <span className="font-mono font-semibold text-ink flex-shrink-0">₹{s.price}</span>
                       </div>
                     ))}
                   </div>
 
-                  <div className="border-t border-white/10 pt-3 space-y-2">
-                    <div className="flex justify-between"><span className="text-paper/50">Total Duration</span><span className="font-semibold text-paper">{totalDuration} min</span></div>
-                    <div className="flex justify-between items-center"><span className="text-paper/50">Total Price</span><span className="font-mono font-bold text-brass text-base">₹{totalPrice}</span></div>
+                  <div className="border-t border-ink/10 pt-3 space-y-2">
+                    <div className="flex justify-between"><span className="text-ink/50">Total Duration</span><span className="font-semibold text-ink">{totalDuration} min</span></div>
+                    <div className="flex justify-between items-center"><span className="text-ink/50">Total Price</span><span className="font-mono font-bold text-brass text-base">₹{totalPrice}</span></div>
                   </div>
                 </div>
 
                 {/* Perforated tear line — separates the "order" half from
                     the "ticket" half, like a real receipt-and-stub. */}
                 <div className="flex items-center px-6">
-                  <div className="flex-1 border-t-2 border-dashed border-white/15 text-white/25 ticket-notch" />
+                  <div className="flex-1 border-t-2 border-dashed border-ink/15 text-ink/25 ticket-notch" />
                 </div>
 
-                <div className="p-5 sm:p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Bell size={16} className="text-rose" />
-                    <span className="font-display font-semibold text-paper text-sm">Estimated Arrival Time</span>
-                  </div>
-                  <div className="glass rounded-xl p-4 sm:p-5 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-paper/65 text-sm">Your turn at:</span>
-                      <span className="text-2xl font-mono font-bold text-rose">{formatTime(estimatedArrivalMs)}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-paper/65">Wait time:</span>
-                      <span className="font-bold text-paper font-mono">~{waitMinutes} minutes</span>
-                    </div>
-
-                    {/* Explained + fair: show exactly where in line this
-                        booking lands and why the wait is what it is —
-                        people tolerate a known, justified wait far better
-                        than an unexplained one. */}
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-paper/65">Your place in line:</span>
-                      <span className="font-bold text-paper font-mono">#{yourPositionInLine}</span>
-                    </div>
-                    <div className="text-xs text-paper/80 bg-white/10 rounded-lg px-3 py-2 leading-relaxed">
-                      {chairStatus.chairAvailableNow
-                        ? `A chair is free right now — you may start sooner than the estimate.`
-                        : `All ${chairStatus.totalChairs} chair${chairStatus.totalChairs > 1 ? 's are' : ' is'} currently busy — this estimate updates live as customers finish.`}
-                    </div>
-
-                    {/* Same-hue text on same-hue translucent background reads
-                        as "dull" against a busy backdrop — text and its own
-                        backing need real contrast, not just different
-                        opacities of one color. Solid-ish amber chip +
-                        brass-bright text (not the muted default brass) is
-                        the fix, same pattern as sage-bright elsewhere. */}
-                    <div className="bg-brass/30 border border-brass/50 rounded-lg px-3 py-2.5">
-                      <p className="text-xs text-brass-bright font-semibold leading-relaxed">
-                        Please arrive 10-15 min before {formatTime(estimatedArrivalMs)} to avoid missing your slot
-                      </p>
-                    </div>
+                <div className="p-4 sm:p-6">
+                  {/* Arrival time is the one genuinely new number here —
+                      wait time and queue position are already visible in
+                      the stats strip up top, and the arrive-early / chair-
+                      status notes were pushing this below the fold on
+                      mobile without adding anything a customer needs to
+                      act on differently. Down to a single, prominent row. */}
+                  <div className="bg-paper-card border border-ink/10 rounded-xl p-4 flex items-center justify-between">
+                    <span className="text-ink/65 text-sm">Your turn at:</span>
+                    <span className="text-2xl font-mono font-bold text-rose">{formatTime(estimatedArrivalMs)}</span>
                   </div>
 
                   {payError && (
                     <div className="bg-rose/20 border border-rose/40 rounded-xl p-3 mt-4 flex gap-2">
-                      <AlertCircle size={16} className="text-white flex-shrink-0 mt-0.5" />
-                      <p className="text-sm text-paper/90">{payError}</p>
+                      <AlertCircle size={16} className="text-rose flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-ink/90">{payError}</p>
                     </div>
                   )}
 
@@ -634,7 +600,7 @@ export default function SalonDetails() {
                     {(payState === PAY_STATE.IDLE || payState === PAY_STATE.FAILED) && <><CreditCard size={19} /> Pay ₹{totalPrice}</>}
                   </button>
 
-                  <div className="flex items-center justify-center gap-2 mt-3 text-xs text-paper/35">
+                  <div className="flex items-center justify-center gap-2 mt-3 text-xs text-ink/35">
                     <Shield size={12} /> Secured by Razorpay · UPI, Cards, Net Banking accepted
                   </div>
                 </div>
@@ -643,15 +609,15 @@ export default function SalonDetails() {
           </div>
 
           {/* Live queue */}
-          <div className="glass rounded-2xl p-5 sm:p-6">
+          <div className="bg-paper-card border border-ink/10 rounded-2xl p-5 sm:p-6">
             <div className="flex items-center justify-between mb-5 sm:mb-6">
-              <h2 className="text-xl sm:text-2xl font-display font-semibold text-paper">Live Queue</h2>
-              <div className="bg-sage/20 text-sage-bright px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
+              <h2 className="text-xl sm:text-2xl font-display font-semibold text-ink">Live Queue</h2>
+              <div className="bg-sage/20 text-sage px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 bg-sage-bright rounded-full animate-pulse" /> LIVE
               </div>
             </div>
             {queue.length === 0 ? (
-              <div className="text-center py-12 text-paper/35">
+              <div className="text-center py-12 text-ink/35">
                 <Users size={44} className="mx-auto mb-3 opacity-50" />
                 <p className="text-base font-display">No one in queue</p>
                 <p className="text-sm">Be the first to book!</p>
@@ -660,23 +626,23 @@ export default function SalonDetails() {
               <div className="space-y-2.5">
                 {queue.map((entry, index) => (
                   <div key={entry.id}
-                    className={`p-3.5 rounded-xl ${entry.status === 'IN_PROGRESS' ? 'bg-sage/15 border border-sage/30' : 'glass-lite'}`}>
+                    className={`p-3.5 rounded-xl ${entry.status === 'IN_PROGRESS' ? 'bg-sage/15 border border-sage/30' : 'bg-paper-card border border-ink/10'}`}>
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-mono font-bold text-sm flex-shrink-0 ${entry.status === 'IN_PROGRESS' ? 'bg-sage text-white' : 'bg-white/15 text-paper'}`}>
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-mono font-bold text-sm flex-shrink-0 ${entry.status === 'IN_PROGRESS' ? 'bg-sage text-white' : 'bg-ink/15 text-ink'}`}>
                         {index + 1}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-paper text-sm truncate">{entry.serviceName}</div>
-                        <div className="text-xs text-paper/50">
+                        <div className="font-semibold text-ink text-sm truncate">{entry.serviceName}</div>
+                        <div className="text-xs text-ink/50">
                           {entry.status === 'IN_PROGRESS'
-                            ? <span className="text-sage-bright font-bold">In Progress</span>
+                            ? <span className="text-sage font-bold">In Progress</span>
                             : <span>~{entry.estimatedDurationMinutes} min</span>}
                         </div>
                       </div>
                       {/* Chair badge — only meaningful (and only shown) once
                           a second chair is actually active for this salon */}
                       {chairStatus.totalChairs > 1 && entry.status === 'IN_PROGRESS' && (
-                        <span className="bg-white/10 text-paper/60 px-2 py-0.5 rounded text-[10px] font-bold flex-shrink-0">
+                        <span className="bg-ink/10 text-ink/60 px-2 py-0.5 rounded text-[10px] font-bold flex-shrink-0">
                           CHAIR {entry.chairNumber || 1}
                         </span>
                       )}
@@ -692,11 +658,11 @@ export default function SalonDetails() {
         </div>
 
         {/* ── Reviews Section ── */}
-        <div className="glass rounded-2xl p-5 sm:p-6 mb-8">
-          <h2 className="text-xl sm:text-2xl font-display font-semibold text-paper mb-5 sm:mb-6">
+        <div className="bg-paper-card border border-ink/10 rounded-2xl p-5 sm:p-6 mb-8">
+          <h2 className="text-xl sm:text-2xl font-display font-semibold text-ink mb-5 sm:mb-6">
             Reviews
             {reviews.length > 0 && (
-              <span className="ml-2 text-sm sm:text-base font-body font-normal text-paper/40">({reviews.length})</span>
+              <span className="ml-2 text-sm sm:text-base font-body font-normal text-ink/40">({reviews.length})</span>
             )}
           </h2>
 
@@ -705,18 +671,18 @@ export default function SalonDetails() {
               <div className="w-6 h-6 border-2 border-rose/30 border-t-rose rounded-full animate-spin" />
             </div>
           ) : reviews.length === 0 ? (
-            <div className="text-center py-10 text-paper/35">
+            <div className="text-center py-10 text-ink/35">
               <Star size={32} className="mx-auto mb-2 opacity-40" />
               <p className="text-sm">No reviews yet. Book a service and be the first to review!</p>
             </div>
           ) : (
             <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
               {reviews.map(review => (
-                <div key={review.id} className="glass-lite rounded-xl px-4 sm:px-5 py-4">
+                <div key={review.id} className="bg-paper-card border border-ink/10 rounded-xl px-4 sm:px-5 py-4">
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <p className="font-semibold text-paper text-sm">{review.customerName}</p>
-                      <p className="text-xs text-paper/35 mt-0.5">
+                      <p className="font-semibold text-ink text-sm">{review.customerName}</p>
+                      <p className="text-xs text-ink/35 mt-0.5">
                         {new Date(review.createdAt).toLocaleDateString('en-IN', {
                           day: 'numeric', month: 'short', year: 'numeric'
                         })}
@@ -727,13 +693,13 @@ export default function SalonDetails() {
                         <Star key={s} size={13} className={
                           s <= review.rating
                             ? 'fill-brass text-brass'
-                            : 'fill-white/10 text-white/10'
+                            : 'fill-ink/10 text-ink/15'
                         } />
                       ))}
                     </div>
                   </div>
                   {review.comment && (
-                    <p className="text-sm text-paper/60 leading-relaxed">{review.comment}</p>
+                    <p className="text-sm text-ink/60 leading-relaxed">{review.comment}</p>
                   )}
                 </div>
               ))}
