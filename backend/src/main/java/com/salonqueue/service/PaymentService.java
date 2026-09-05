@@ -18,6 +18,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.List;
@@ -249,7 +250,10 @@ public class PaymentService {
             return;
         }
 
-        // Update payment record
+        // Record that Razorpay actually captured the money BEFORE we look
+        // at what state the booking is in. This can never be skipped: even
+        // if the booking below turns out to already be cancelled, real
+        // money moved and that must never go unrecorded.
         payment.setRazorpayPaymentId(razorpayPaymentId);
         if (razorpaySignature != null) {
             payment.setRazorpaySignature(razorpaySignature);
@@ -258,8 +262,36 @@ public class PaymentService {
         payment.setCapturedAt(LocalDateTime.now());
         paymentRepository.save(payment);
 
-        // Confirm booking
         Booking booking = payment.getBooking();
+
+        // Guards against a real (if rare) race with PaymentCleanupScheduler:
+        // if Razorpay's webhook is delayed past payment.pending-timeout-minutes
+        // (webhook retry delay, an outage on our endpoint, etc.), the cleanup
+        // job may have already cancelled this booking as PAYMENT_TIMEOUT
+        // before this confirmation arrived. The findByRazorpayOrderIdForUpdate
+        // lock above and the matching findByBookingIdForUpdate lock in the
+        // cleanup job make sure these two never interleave mid-write — but
+        // if cleanup's transaction committed first, we land here and see it.
+        //
+        // We must NOT silently flip this back to CONFIRMED and drop the
+        // customer into a live queue: they were already told the booking
+        // was cancelled, and nobody at the salon is expecting them. But we
+        // also must not lose the fact that they were genuinely charged.
+        // Recording it as CAPTURED above (not FAILED) and logging loudly
+        // here is what lets an admin find and resolve this — refund or
+        // manual re-booking — rather than it disappearing into logs as an
+        // ordinary success.
+        if (booking.getStatus() == Booking.BookingStatus.CANCELLED) {
+            log.error("PAYMENT CAPTURED FOR ALREADY-CANCELLED BOOKING — needs manual reconciliation: " +
+                            "booking={}, razorpayPaymentId={}, amountPaise={}. The booking was auto-cancelled " +
+                            "(reason={}) before this confirmation arrived, most likely because the webhook " +
+                            "was delayed past the payment timeout window. NOT adding to queue automatically.",
+                    booking.getBookingCode(), razorpayPaymentId, payment.getAmountPaise(),
+                    booking.getCancellationReason());
+            return;
+        }
+
+        // Confirm booking
         booking.setStatus(Booking.BookingStatus.CONFIRMED);
         booking.setPaymentCompleted(true);
         booking.setPaymentId(razorpayPaymentId);
@@ -285,7 +317,8 @@ public class PaymentService {
      */
     private boolean verifyWebhookSignature(String payload, String signature) {
         try {
-            return hmacSha256(payload, razorpayWebhookSecret).equals(signature);
+            String expected = hmacSha256(payload, razorpayWebhookSecret);
+            return constantTimeEquals(expected, signature);
         } catch (Exception e) {
             log.error("Webhook signature verification error: {}", e.getMessage());
             return false;
@@ -301,11 +334,35 @@ public class PaymentService {
      */
     private boolean verifyPaymentSignature(String payload, String signature) {
         try {
-            return hmacSha256(payload, razorpayKeySecret).equals(signature);
+            String expected = hmacSha256(payload, razorpayKeySecret);
+            return constantTimeEquals(expected, signature);
         } catch (Exception e) {
             log.error("Payment signature verification error: {}", e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Compares two hex-encoded signatures in constant time.
+     *
+     * A plain String.equals() short-circuits on the first mismatched
+     * character, so how long the comparison takes leaks how many leading
+     * characters of a forged signature were already correct — a classic
+     * timing side-channel that lets an attacker recover a valid signature
+     * one byte at a time across many requests. MessageDigest.isEqual always
+     * compares every byte regardless of where the first mismatch is, so the
+     * response time doesn't reveal anything. Signatures verify money
+     * movement here, so this is worth doing properly rather than relying on
+     * network jitter to make the timing attack impractical.
+     */
+    private boolean constantTimeEquals(String expected, String actual) {
+        if (expected == null || actual == null) {
+            return false;
+        }
+        return MessageDigest.isEqual(
+                expected.getBytes(StandardCharsets.UTF_8),
+                actual.getBytes(StandardCharsets.UTF_8)
+        );
     }
 
     /**

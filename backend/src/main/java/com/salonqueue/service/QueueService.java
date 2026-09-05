@@ -405,26 +405,84 @@ public class QueueService {
                 .build();
     }
 
+    /**
+     * Reassigns 1..N positions to WAITING entries in queue order.
+     *
+     * IMPORTANT: this does NOT recompute estimatedStartTime for entries
+     * that already have one. estimatedStartTime is the arrival/start time
+     * we actually promised the customer, set once when they joined the
+     * queue (see calculateEstimatedStartTime). It must not be recalculated
+     * here — every time this method runs (e.g. because someone ahead of
+     * you got cancelled or finished early), the chair-simulation below
+     * would otherwise recompute everyone's estimate from "right now,"
+     * which silently overwrites an online customer's booked 10:00 AM slot
+     * with "now" the instant the queue clears ahead of them — and then the
+     * no-show check (which compares against estimatedStartTime) would
+     * treat them as instantly overdue. The queue moving faster than
+     * expected is good news for the customer, not a reason to move their
+     * promised time earlier or start their no-show clock sooner.
+     *
+     * Only position numbers are reassigned here. estimatedStartTime is
+     * set once, at creation, and never modified again while WAITING.
+     */
+    /**
+     * Every WAITING entry that's actually eligible to be auto-expired right
+     * now: its promised estimatedStartTime is more than timeoutMinutes in
+     * the past, AND there's a free chair available for it at its current
+     * position.
+     *
+     * "Free chair available for it" matters because this app supports more
+     * than one chair, and startService lets the barber start any waiting
+     * entry, not only position 1 — so with 2 chairs, position 1 and
+     * position 2 can both have an open chair waiting for them at the same
+     * time. Only ever checking position 1 (the old approach) meant that on
+     * a 2-chair salon, someone at position 2 sitting on a genuinely free
+     * chair, long past their own promised time, would never be expired
+     * until position 1 was resolved first — however long that took, even
+     * if position 1 wasn't overdue at all yet.
+     *
+     * Concretely: an entry at position P is eligible if P <= the number of
+     * chairs not currently occupied by an IN_PROGRESS entry at that salon.
+     */
+    @Transactional(readOnly = true)
+    public List<QueueEntry> findOverdueWaitingEntries(int timeoutMinutes) {
+        LocalDateTime cutoffTime = LocalDateTime.now().minusMinutes(timeoutMinutes);
+        List<QueueEntry> staleCandidates =
+                queueEntryRepository.findStaleWaitingEntriesOrderedBySalonAndPosition(cutoffTime);
+
+        List<QueueEntry> eligible = new java.util.ArrayList<>();
+        Long currentSalonId = null;
+        int freeChairs = 0;
+
+        for (QueueEntry entry : staleCandidates) {
+            Long salonId = entry.getSalon().getId();
+            if (!salonId.equals(currentSalonId)) {
+                currentSalonId = salonId;
+                int totalChairs = getTotalChairs(salonId);
+                int inProgressCount = queueEntryRepository
+                        .findBySalonIdAndStatusInOrderByPositionAsc(
+                                salonId, Arrays.asList(QueueEntry.QueueStatus.IN_PROGRESS))
+                        .size();
+                freeChairs = Math.max(0, totalChairs - inProgressCount);
+            }
+
+            if (entry.getPosition() != null && entry.getPosition() <= freeChairs) {
+                eligible.add(entry);
+            }
+        }
+
+        return eligible;
+    }
+
     private void updateQueuePositions(Long salonId) {
         List<QueueEntry> waitingEntries = queueEntryRepository.findBySalonIdAndStatusInOrderByPositionAsc(
                 salonId,
                 Arrays.asList(QueueEntry.QueueStatus.WAITING)
         );
 
-        int totalChairs = getTotalChairs(salonId);
-        int[] chairFreeInMinutes = simulateChairFreeMinutes(salonId, totalChairs);
-
         int position = 1;
         for (QueueEntry entry : waitingEntries) {
             entry.setPosition(position++);
-
-            // Whichever chair frees up soonest gets the next person in line —
-            // this is the same "two clocks, always pick the smaller one" rule
-            // whether chairs=1 or chairs=2.
-            int idx = argMinIndex(chairFreeInMinutes);
-            int waitMinutes = chairFreeInMinutes[idx];
-            entry.setEstimatedStartTime(LocalDateTime.now().plusMinutes(waitMinutes));
-            chairFreeInMinutes[idx] += entry.getEstimatedDurationMinutes();
         }
 
         queueEntryRepository.saveAll(waitingEntries);

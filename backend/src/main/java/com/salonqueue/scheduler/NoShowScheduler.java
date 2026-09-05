@@ -12,7 +12,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
@@ -25,8 +24,9 @@ public class NoShowScheduler {
     private final QueueService queueService;
 
     /**
-     * How long (minutes) a customer can sit at position 1 with no service
-     * started before being marked NO_SHOW.
+     * How long (minutes) a customer can sit on an available chair with no
+     * service started, past their promised arrival time, before being
+     * marked NO_SHOW.
      *
      * Configurable in application.properties:
      *   queue.noshow.timeout-minutes=15
@@ -39,10 +39,14 @@ public class NoShowScheduler {
     /**
      * Runs every 2 minutes.
      *
-     * Finds every WAITING entry at position 1 where:
-     *   1. The entry has been waiting longer than noShowTimeoutMinutes
-     *   2. No service is currently IN_PROGRESS at that salon
-     *      (meaning the barber is free but hasn't started — customer is absent)
+     * Delegates to QueueService.findOverdueWaitingEntries, which finds
+     * every WAITING entry where:
+     *   1. Its promised estimatedStartTime is more than noShowTimeoutMinutes
+     *      in the past, AND
+     *   2. There's actually a free chair available for it right now (not
+     *      just "it's at position 1" — with more than one chair, several
+     *      positions can have an open chair simultaneously; see that
+     *      method's Javadoc for why this matters)
      *
      * For each stale entry:
      *   - Marks the QueueEntry as NO_SHOW
@@ -56,10 +60,7 @@ public class NoShowScheduler {
     @Scheduled(fixedDelayString = "${queue.noshow.check-interval-ms:60000}")
     @Transactional
     public void autoExpireNoShows() {
-        LocalDateTime cutoffTime = LocalDateTime.now().minusMinutes(noShowTimeoutMinutes);
-
-        List<QueueEntry> staleEntries = queueEntryRepository
-                .findStaleFirstPositionEntries(cutoffTime);
+        List<QueueEntry> staleEntries = queueService.findOverdueWaitingEntries(noShowTimeoutMinutes);
 
         if (staleEntries.isEmpty()) {
             return; // nothing to do — skip logging noise
@@ -69,8 +70,8 @@ public class NoShowScheduler {
 
         for (QueueEntry entry : staleEntries) {
             Long salonId = entry.getSalon().getId();
-            log.info("Auto-expiring no-show: customer='{}', salon={}, waited since={}",
-                    entry.getCustomerName(), salonId, entry.getCreatedAt());
+            log.info("Auto-expiring no-show: customer='{}', salon={}, was promised arrival by={}",
+                    entry.getCustomerName(), salonId, entry.getEstimatedStartTime());
 
             // Mark queue entry as NO_SHOW
             entry.setStatus(QueueEntry.QueueStatus.NO_SHOW);

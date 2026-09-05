@@ -25,27 +25,21 @@ public interface QueueEntryRepository extends JpaRepository<QueueEntry, Long> {
     long countByStatus(QueueEntry.QueueStatus status);
 
     /**
-     * NEW — used by the no-show scheduler.
-     *
-     * Finds all WAITING entries at position 1 (first in queue) that have been
-     * waiting longer than the given cutoff time, BUT only for salons where
-     * nobody is currently IN_PROGRESS.
-     *
-     * The subquery ensures we don't auto-expire someone while a service is
-     * actively running — that would mean the barber is busy and the wait is
-     * legitimately continuing.
+     * Every currently-WAITING entry whose promised estimatedStartTime is
+     * more than the no-show cutoff in the past, across all salons, ordered
+     * by salon then position. This is filtered further in QueueService —
+     * see findOverdueWaitingEntries — to only the entries that actually
+     * have a free chair available to them right now, since with more than
+     * one chair, "position 1" and "a chair is free for you" are not the
+     * same thing.
      */
     @Query("""
             SELECT q FROM QueueEntry q
             WHERE q.status = 'WAITING'
-              AND q.position = 1
-              AND q.createdAt < :cutoffTime
-              AND q.salon.id NOT IN (
-                  SELECT q2.salon.id FROM QueueEntry q2
-                  WHERE q2.status = 'IN_PROGRESS'
-              )
+              AND q.estimatedStartTime < :cutoffTime
+            ORDER BY q.salon.id ASC, q.position ASC
             """)
-    List<QueueEntry> findStaleFirstPositionEntries(@Param("cutoffTime") LocalDateTime cutoffTime);
+    List<QueueEntry> findStaleWaitingEntriesOrderedBySalonAndPosition(@Param("cutoffTime") LocalDateTime cutoffTime);
 
     /**
      * NEW — used by the scheduler to check if any IN_PROGRESS entry exists

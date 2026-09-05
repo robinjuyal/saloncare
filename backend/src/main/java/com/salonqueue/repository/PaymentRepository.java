@@ -33,6 +33,19 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @Query("SELECT p FROM Payment p WHERE p.razorpayOrderId = :orderId")
     Optional<Payment> findByRazorpayOrderIdForUpdate(@Param("orderId") String orderId);
 
+    /**
+     * Same locking pattern as findByRazorpayOrderIdForUpdate, keyed by
+     * booking instead. Used by PaymentCleanupScheduler so that cancelling
+     * an abandoned PENDING_PAYMENT booking and confirmPayment() capturing
+     * that same booking's payment can never interleave: whichever one
+     * acquires the row lock first forces the other to wait and then see
+     * its committed result, instead of both reading a stale CREATED status
+     * and racing to write conflicting outcomes.
+     */
+    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Payment p WHERE p.booking.id = :bookingId")
+    Optional<Payment> findByBookingIdForUpdate(@Param("bookingId") Long bookingId);
+
     long countByStatus(Payment.PaymentStatus status);
     List<Payment> findByStatus(Payment.PaymentStatus status);
 
