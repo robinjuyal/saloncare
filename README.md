@@ -42,6 +42,8 @@ The original working platform: JWT auth, salon search with Haversine distance, l
 
 *What we did:* Every secret in `application.properties` now reads from an environment variable with an obviously-fake local-dev fallback (`spring.datasource.password=${DB_PASSWORD:changeme}`, etc.), matching the pattern this README's "Environment Setup" section already documented — the file just hadn't matched its own documentation.
 
+*Correction, added later:* this section describes what was *planned and documented* — but as of this README's most recent review, `application.properties` as tracked in the repo **still has the real DB password, JWT secret, and Razorpay key ID/secret/webhook secret hardcoded**, unchanged from before this section was written. The env-var pattern described above was never actually applied to the committed file, or was reverted at some point. **This is not fixed. Treat this exactly as the "why it mattered" paragraph above describes — anyone with the repo URL can currently read the JWT secret and forge a valid token for any role — until the file is actually edited to use `${DB_PASSWORD}` etc. and those three credentials are rotated.** See Security → Production Checklist, which reflects this as still outstanding.
+
 *What we didn't do, and why:* We did not rewrite git history to scrub the old secrets. Deleting a file going forward doesn't remove it from git history — anyone can still find the old values in old commits. Given this is a pre-launch project, rotating the actual credentials (new DB password, new JWT secret, new Razorpay keys, all generated *after* this fix) was judged simpler and more reliable than a history rewrite. **If you're reading this and haven't rotated those three credentials yet, do that before deploying anything.**
 
 **2. Payment cleanup: abandoned checkouts were never resolved**
@@ -125,9 +127,9 @@ Migrating off `localhost` surfaced that CORS/WebSocket origins were hardcoded in
 
 ---
 
-**7. major update on readme file**
+### v3.1 — Multi-Service Booking
 
-- **This 7th point was added long after the readme was built , this point is the most current update i'm putting in this readme file** — Multi-service booking is fully built. Here's what's in it:
+Multi-service booking is fully built. Here's what's in it:
 
 Backend — the real data model change
 
@@ -143,7 +145,39 @@ A small persistent strip appears once 2+ services are selected — "3 services s
 Booking summary: now itemizes every selected service on its own line with its own price, then a bold Total Duration / Total Price beneath — exactly as we discussed, nothing hidden at the moment someone's about to pay.
 My Bookings: needed zero frontend changes — since the backend now sends an already-joined string ("Men's Haircut + Men's Beard") into the same serviceName field the UI already displays with truncate, it just works.
 
-Given the size of this change (new entity, removed a live endpoint, rewired the entire selection state), this is the one I'd most want you to actually click through end-to-end before trusting — select 2-3 services, confirm the summary and total look right, complete a real test payment, and check both the success ticket and My Bookings show the combined name correctly..
+Given the size of this change (new entity, removed a live endpoint, rewired the entire selection state), this is the one I'd most want you to actually click through end-to-end before trusting — select 2-3 services, confirm the summary and total look right, complete a real test payment, and check both the success ticket and My Bookings show the combined name correctly.
+
+### v4.0 — No-Show Logic Correctness, Multi-Chair Blind Spot, Payment/Cleanup Race Hardening
+
+A month of manual scenario testing (every combination of walk-ins, online bookings, and cancellations the owner could think up) surfaced two real no-show bugs and one payment-timing bug. All three were logic errors that only show up under specific timing/ordering conditions — exactly the kind of thing that survives casual testing and then bites on real traffic.
+
+**1. No-show timer was measured from the wrong clock — twice.**
+
+*First (still-wrong) version:* the original scheduler checked `createdAt` (when the customer joined the queue) against a 15-minute cutoff. This punished anyone who had to wait behind other customers — their no-show clock was effectively running the whole time they were waiting in line, not just once they reached the front. If several people joined the queue close together, they could all become "already overdue" by the 15-minute mark, cascading into rapid-fire no-shows the instant each one reached position 1, regardless of how long they'd actually been at the front.
+
+*Second (also wrong) version:* fixed by tracking `becameFirstAt` — a timestamp set the moment an entry reached position 1 — and checking *that* against the 15-minute cutoff instead. This fixed the cascade, but broke online bookings: a customer who books a 10:00 AM slot, then finds the queue clears out early and they reach position 1 at 9:15, would get their no-show clock start ticking from 9:15 — meaning they could be cancelled by 9:30, 30 minutes before they were ever told to arrive. Internal queue bookkeeping (when a bookkeeping event happens) and the actual promise made to the customer (when we told them to show up) aren't the same thing.
+
+*Actual fix:* the no-show check now compares against `estimatedStartTime` — the arrival/start time actually shown to the customer, computed once when they join the queue — and that field is now frozen once set. `updateQueuePositions()` no longer recalculates it every time the queue reshuffles (previously, it silently overwrote an online booking's promised slot with "right now" the instant a chair opened up early, which is what caused the second bug above). A customer's promised time only ever comes from what they were actually told, and the 15-minute grace period is measured from there, full stop — regardless of when they became first, regardless of how the queue moved around them.
+
+*Trade-off knowingly accepted:* this means the *displayed* wait estimate for customers not yet at the front no longer gets more optimistic if people ahead of them finish early or get cancelled — it's frozen from the moment they joined, same as the no-show promise. Correct for fairness, less real-time for display. If dynamic ETA updates are wanted back, that needs two separate fields (a freely-recalculating display estimate, and a frozen promise the no-show check uses) — not built, since nobody's asked for it yet.
+
+**2. No-show scheduler had a multi-chair blind spot.**
+
+Two compounding issues, both from a query written assuming a single chair:
+- It only ever checked the entry at **position 1**. With 2 chairs, position 2 can have its own free chair waiting for them at the same time (this app already lets the barber start service out of order — see `startService`), but the scheduler would never even look at position 2 until position 1 was resolved first, no matter how overdue position 2 already was.
+- It excluded the **entire salon** from checking if *any* entry was `IN_PROGRESS` — even if only one of two chairs was occupied and the other sat free with someone overdue on it.
+
+*Fix:* `QueueService.findOverdueWaitingEntries()` now computes, per salon, how many chairs are actually free right now (`totalChairs − count(IN_PROGRESS)`), and checks every waiting entry whose position falls within that count — independently, against its own `estimatedStartTime`. Generalizes correctly to any number of chairs and subsumes both old checks.
+
+**3. Payment cleanup could race a late-arriving webhook.**
+
+`PaymentCleanupScheduler` cancels bookings stuck in `PENDING_PAYMENT` for 20+ minutes. If Razorpay's webhook is delayed past that window (webhook retry delay, an outage on our endpoint — realistic conditions for a payment gateway), the cleanup job could cancel the booking and mark the payment `FAILED` moments before the real confirmation arrived. `confirmPayment()`'s idempotency check (`if status == CAPTURED, skip`) doesn't catch this, since cleanup had already moved the status to `FAILED`, not left it at `CAPTURED` — so the late webhook would blindly overwrite everything back to `CONFIRMED` and silently drop the customer into the live queue, despite them already having been told the booking was cancelled. A closely related lost-update variant existed too: without any lock, cleanup could read a stale `CREATED` status, block on `confirmPayment()`'s lock mid-write, then overwrite a payment that had *just* been successfully captured.
+
+*Fix:* `PaymentRepository.findByBookingIdForUpdate()` — the same pessimistic-lock pattern already used for `findByRazorpayOrderIdForUpdate` — is now taken by the cleanup job before it touches a candidate booking's payment, so a webhook/frontend confirmation landing at the same moment can never interleave with it; whichever side gets the lock first, the other sees its committed result instead of stale data. As a second, independent safety net, `confirmPayment()` now checks whether the booking is already `CANCELLED` before re-confirming it — if so, it still records the payment as `CAPTURED` (the money genuinely moved; that must never be lost) but does **not** resurrect the booking into the queue, and logs a loud `PAYMENT CAPTURED FOR ALREADY-CANCELLED BOOKING` error for manual reconciliation (refund or manual re-booking) instead.
+
+**4. Small hardening: constant-time signature comparison.**
+
+Both `verifyWebhookSignature` and `verifyPaymentSignature` compared HMAC signatures with plain `String.equals()`, which short-circuits on the first mismatched byte — a timing side-channel that, in principle, lets an attacker recover a valid signature one byte at a time by measuring response times. Switched both to `MessageDigest.isEqual()`, which always compares every byte regardless of where the first mismatch is. Cheap fix, and these two checks are what stand between an unauthenticated endpoint and a forged "payment succeeded" signal, so it was worth doing properly..
 
 ---
 
@@ -183,10 +217,11 @@ Admin (founder) goes door-to-door to salons, registers them directly in the admi
 | Spring Data JPA | 3.x | ORM |
 | Spring WebSocket | 3.x | Real-time queue updates |
 | PostgreSQL | 15+ | Primary database |
-| Flyway | 9.x | Database migrations |
 | Razorpay Java SDK | 1.4.3 | Payment gateway |
 | JJWT | 0.11.x | JWT generation/validation |
 | Lombok | 1.18.x | Boilerplate reduction |
+
+**Schema management:** there is no Flyway (or any migration tool) in this project despite what earlier drafts of this README claimed — `spring.jpa.hibernate.ddl-auto=update` is what actually creates/alters tables, driven directly off the JPA entities. That's fine solo, pre-launch, but it means schema changes aren't versioned or reviewable as their own artifact, and `ddl-auto=update` should become `validate` (with a real migration tool introduced alongside it) before more than one person is deploying against the same database — see Security → Production Checklist.
 
 ### Frontend
 | Technology | Version | Purpose |
@@ -199,7 +234,21 @@ Admin (founder) goes door-to-door to salons, registers them directly in the admi
 | SockJS + STOMP | Latest | WebSocket client |
 | Lucide React | 0.383.0 | Icons |
 
-### Infrastructure (Recommended)
+### Infrastructure — Actually Deployed
+
+The Railway/Supabase/Vercel plan below this line was the original *recommendation* in earlier drafts of this README, but it was never actually used — the app is currently deployed on a single Azure VM instead. Documenting reality:
+
+| Service | What | Purpose |
+|---------|------|---------|
+| Azure VM | Single Linux VM, raw IP (no domain yet) | Runs the Spring Boot backend |
+| Azure Database for PostgreSQL | `saloncare-db.postgres.database.azure.com` | Primary database |
+| Frontend | Built via `npm run build`, served from the same setup | `VITE_API_BASE_URL`/`VITE_WS_URL` point at the VM's IP |
+| Razorpay | Test/Live | Payments |
+
+**This deployment is currently plain HTTP, not HTTPS** — `frontend/.env.production` points at `http://<VM IP>`, with no domain or TLS termination in front of it. This matters more than it might seem: Section 9 (Payment Flow) documents Path A (the Razorpay webhook) as needing a public HTTPS URL to work at all. Right now, only Path B (frontend verify) can function — if a customer's browser closes or loses connection between "Razorpay says success" and the frontend's verify call completing, there's currently no webhook fallback to still confirm that payment. Added to Known Limitations below; a domain + TLS cert (e.g. via Caddy or Nginx + Let's Encrypt, or an Azure-managed cert) should be treated as a pre-launch blocker, not a nice-to-have.
+
+*Original recommendation, for reference (not what's running):*
+
 | Service | Plan | Cost | Purpose |
 |---------|------|------|---------|
 | Railway.app | Starter | ~₹800/mo | Backend hosting |
@@ -274,7 +323,7 @@ Admin (founder) goes door-to-door to salons, registers them directly in the admi
 6. GET /api/services/salon/{id} → available services
 7. GET /api/queue/salon/{id} → current queue + wait time
 8. WebSocket connects → /topic/queue/{id} → live updates
-9. Customer selects service → clicks Pay
+9. Customer selects one or more services (toggle-select, see v3.1) → clicks Pay
 10. POST /api/payments/create-order → creates Booking(PENDING_PAYMENT) + Razorpay order
 11. Razorpay popup opens → customer pays
 12. POST /api/payments/verify → signature verified → Booking(CONFIRMED) → added to queue
@@ -341,11 +390,12 @@ salonqueue/
 │       │       ├── NoShowScheduler.java       # auto-expire top customer after 15 min
 │       │       └── PaymentCleanupScheduler.java # expire abandoned PENDING_PAYMENT bookings
 │       └── resources/
-│           ├── application.properties         # config via env vars (no secrets in file)
-│           └── db/migration/                  # Flyway migrations V1 through V8
-│               ├── V1__initial_schema.sql
-│               ├── V2__...
-│               └── V8__create_reviews_table.sql
+│           ├── application.properties         # NOT actually env-var-only yet — real secrets
+│           │                                  # still hardcoded in the tracked file, see
+│           │                                  # Security → Production Checklist
+│           └── (no migration tool — schema is managed by
+│               spring.jpa.hibernate.ddl-auto=update, driven directly off
+│               the entity classes; see Tech Stack note above)
 │
 └── frontend/                         # React + Vite application
     └── src/
@@ -403,6 +453,7 @@ salons (1) ─────────── (many) bookings
 salons (1) ─────────── (many) reviews
 bookings (1) ────────── (1) queue_entries
 bookings (1) ────────── (1) payments
+bookings (1) ────────── (many) booking_service_items   [snapshotted price/duration]
 ```
 
 ### Key Fields by Entity
@@ -445,7 +496,9 @@ created_at, updated_at
 **bookings**
 ```sql
 id, booking_code (8-char uppercase),
-customer_id, salon_id, service_id,
+customer_id, salon_id,
+-- No direct service_id anymore — a booking can cover multiple services.
+-- See booking_service_items below.
 status (PENDING_PAYMENT | CONFIRMED | IN_PROGRESS | COMPLETED | CANCELLED | NO_SHOW),
 amount (decimal),
 payment_completed (bool),
@@ -454,6 +507,20 @@ cancellation_reason,           -- set by salon when cancelling online booking
 cancelled_at, cancelled_by,
 scheduled_time,
 created_at, updated_at
+```
+
+**booking_service_items**
+```sql
+id, booking_id (FK → bookings),
+service_id (FK → services, nullable — kept even if the underlying service is later deleted),
+service_name, price, duration_minutes   -- snapshotted at booking time, so a customer's
+                                         -- past booking still shows exactly what they
+                                         -- paid for even if the service is later
+                                         -- renamed/repriced/removed
+-- One booking has many of these (replaces the old single service_id FK on bookings).
+-- Booking.getCombinedServiceName() / getTotalDurationMinutes() join/sum these for
+-- anything downstream (the queue, receipts, My Bookings) that just needs one name
+-- and one duration, same as before multi-service existed.
 ```
 
 **payments**
@@ -493,17 +560,8 @@ config_key (PK), config_value, description, updated_at
 -- booking_advance_hours = 24
 ```
 
-### Flyway Migrations
-```
-V1 — initial schema (users, salons, services)
-V2 — queue_entries table
-V3 — bookings table
-V4 — payments table
-V5 — booking cancellation fields (cancellation_reason, cancelled_at, cancelled_by)
-V6 — payments table (refund fields)
-V7 — platform_config table + seed data
-V8 — reviews table + review_images table
-```
+### Schema Management
+There is no migration tool (see the Tech Stack note above) — no Flyway, no versioned migration files. `spring.jpa.hibernate.ddl-auto=update` creates and alters tables directly from the JPA entity classes on startup. Fine for one person iterating solo pre-launch; should be replaced with `validate` + a real migration tool (Flyway or Liquibase, with an actual initial-schema script generated from the current entities) before more than one person deploys against the same database, or before any deploy where an accidental schema-drift mistake would be costly.
 
 ---
 
@@ -538,7 +596,7 @@ V8 — reviews table + review_images table
 - **Platform config** — runtime settings editable without redeployment
 
 ### Automated Features
-- **No-show scheduler** — runs every 60 seconds, marks top WAITING customer as NO_SHOW if `actualStartTime` is null and they've been at position 1 for >15 minutes
+- **No-show scheduler** — runs every 60 seconds; marks a WAITING customer as NO_SHOW if their promised `estimatedStartTime` is more than 15 minutes in the past AND a chair is actually free for them right now (checks every position with an open chair, not just position 1 — see v4.0 in [Version History](#version-history))
 
 ---
 
@@ -546,7 +604,8 @@ V8 — reviews table + review_images table
 
 ### Authentication
 ```
-POST /api/auth/signup       Public    Create account (CUSTOMER or SALON_OWNER)
+POST /api/auth/signup       Public    Create account (CUSTOMER only — SALON_OWNER accounts
+                                       are created exclusively via admin, see v3.0)
 POST /api/auth/login        Public    Login, returns JWT
 ```
 
@@ -573,13 +632,16 @@ POST /api/queue/{id}/cancel-booking      Auth    Cancel online booking with reas
 
 ### Bookings
 ```
-POST /api/bookings              Auth    Create booking (legacy, direct without payment)
 GET  /api/bookings/customer     Auth    Customer's own booking history
 ```
+*(There used to be a `POST /api/bookings` here — a dead, payment-bypassing endpoint never called by the frontend. Removed rather than updated for multi-service; see v3.1 in [Version History](#version-history).)*
 
 ### Payments
 ```
-POST /api/payments/create-order  Auth       Create Razorpay order + PENDING_PAYMENT booking
+POST /api/payments/create-order  Auth       Body: { salonId, serviceIds: [...], notes }.
+                                             Validates every serviceId belongs to salonId,
+                                             sums price + duration → creates Razorpay order
+                                             + PENDING_PAYMENT booking
 POST /api/payments/verify        Auth       Verify signature → CONFIRMED → add to queue
 POST /api/payments/webhook       Public*    Razorpay webhook (verified by HMAC signature)
 GET  /api/payments/status/{id}   Auth       Poll payment status by Razorpay order ID
@@ -644,7 +706,7 @@ This happens on: add walk-in, start service, complete service, remove from queue
 - `SalonDetails.jsx` — customer's salon page (live queue preview)
 
 ### Wait Time Calculation
-Backend and frontend both simulate one "frees up in N minutes" clock per active chair (`totalChairs`, 1 or 2), seeded from whoever's currently `IN_PROGRESS` on that chair:
+Two related but distinct things use this same "frees up in N minutes" simulation, one per active chair (`totalChairs`, 1 or 2), seeded from whoever's currently `IN_PROGRESS` on that chair:
 ```
 chairFreeInMinutes[chair] = max(0, estimatedDuration - elapsedSinceActualStartTime)  // 0 if chair is empty
 
@@ -653,7 +715,13 @@ for each WAITING customer in position order:
     theirWait = chairFreeInMinutes[idx]
     chairFreeInMinutes[idx] += theirEstimatedDuration
 ```
-Each waiting customer is assigned to whichever chair frees up soonest. With `totalChairs=1` this collapses back to the original single-line sum — no separate code path for single-chair salons. Uses `actualStartTime` from the server (set when the barber clicks Start) — not a client-side timer — so the owner dashboard and the customer's view always agree.
+Each waiting customer is assigned to whichever chair frees up soonest. With `totalChairs=1` this collapses back to the original single-line sum — no separate code path for single-chair salons.
+
+**1. `GET /api/queue/salon/{id}/wait-time`** (`QueueService.getEstimatedWaitTime()`) — recalculates fresh, live, on every call. This is "if I joined right now, how long would I wait" — shown to a prospective customer before they've joined, and it's meant to move as the real queue moves.
+
+**2. Each `QueueEntry.estimatedStartTime`** — the specific arrival/start time promised to a customer who has already joined. This runs the same simulation, but **only once, at the moment they join** (`calculateEstimatedStartTime`). After that it's frozen — `updateQueuePositions()` no longer recalculates it when the queue reshuffles (people ahead finishing, cancelling, or being marked no-show). This was a deliberate fix in v4.0: recalculating it live meant an online booking's promised slot could get silently overwritten with "right now" the instant a chair opened up early, which then made the no-show check (which compares against this same field) treat them as instantly overdue. See v4.0 in [Version History](#version-history) for the full story, including the trade-off — downstream customers no longer see their estimate get more optimistic as people ahead of them clear out early.
+
+Both paths use `actualStartTime` from the server (set when the barber clicks Start) — not a client-side timer — so the owner dashboard and the customer's view always agree on what's actually happening right now, even though #2 above is deliberately *not* live once set.
 
 ---
 
@@ -722,7 +790,8 @@ Barber taps Start → IN_PROGRESS (actualStartTime set, chairNumber assigned to
                      lowest-numbered free chair, position cleared)
 Barber taps Done  → COMPLETED (booking marked COMPLETED)
 Barber cancels    → CANCELLED (with reason, customer notified in MyBookings)
-No-show scheduler → NO_SHOW (after 15 min at position 1 with no start)
+No-show scheduler → NO_SHOW (promised estimatedStartTime + 15 min has passed, AND a
+                     chair is actually free for their position — see v4.0)
 Payment abandoned → CANCELLED, reason=PAYMENT_TIMEOUT (after 20 min in PENDING_PAYMENT,
                      via PaymentCleanupScheduler — never reaches the queue at all)
 ```
@@ -739,8 +808,20 @@ Positions are reassigned after every change, in `QueueService.updateQueuePositio
 ### No-Show Scheduler
 ```java
 // Runs every 60 seconds (configurable via queue.noshow.check-interval-ms)
-// Finds all WAITING entries at position 1
-// If createdAt < now - 15 minutes AND actualStartTime is null
+//
+// For each salon, computes freeChairs = totalChairs - count(IN_PROGRESS).
+// Checks every WAITING entry whose position <= freeChairs (not just position 1 —
+// with 2 chairs, position 1 AND position 2 can each have their own free chair
+// waiting on them at the same time; see v4.0 in Version History for why the old
+// "only check position 1, skip the whole salon if anyone is IN_PROGRESS" version
+// was wrong on a 2-chair salon).
+//
+// For each of those entries:
+// If estimatedStartTime < now - 15 minutes
+//   (estimatedStartTime is the arrival time actually promised to the customer,
+//    set once when they joined the queue and frozen since — NOT createdAt,
+//    and NOT "time they became position 1"; both were tried and both were
+//    wrong, see v4.0)
 // → status = NO_SHOW
 // → if linked booking: booking.status = NO_SHOW
 // → recalculate positions
@@ -804,7 +885,7 @@ If the signature doesn't match, the request is rejected with 400.
 When admin deactivates a user, `user.active = false`. `UserPrincipal.isEnabled()` returns `user.active`. Spring Security rejects login attempts for disabled accounts. Existing valid JWTs for deactivated users will fail on next request since `loadUserById` will return a disabled principal.
 
 ### Production Checklist
-- [ ] All secrets in environment variables, never in code or properties files *(as of v2.0, `application.properties` follows this — but the credentials committed before that fix should be treated as compromised and rotated; see [Version History](#version-history))*
+- [ ] **All secrets in environment variables, never in code or properties files — NOT DONE.** `application.properties` as currently tracked still has the real DB password, JWT signing secret, and Razorpay key ID/secret/webhook secret hardcoded in plaintext, in a *public* repo. The v2.0 entry in [Version History](#version-history) describes this as fixed — it wasn't actually applied to the committed file (or was reverted). Do not deploy until: (1) the file is edited to use `${DB_PASSWORD}` / `${JWT_SECRET}` / etc. with only fake local-dev fallbacks, and (2) all three credentials are rotated — the current values must be treated as already compromised, since they've been sitting in a public repo.
 - [ ] `.env` and `application-prod.properties` in `.gitignore`
 - [ ] JWT secret generated with `openssl rand -hex 32`
 - [ ] `spring.jpa.hibernate.ddl-auto=validate` (not update)
@@ -813,6 +894,9 @@ When admin deactivates a user, `user.active = false`. `UserPrincipal.isEnabled()
 - [ ] Razorpay switched from test keys (`rzp_test_`) to live keys (`rzp_live_`)
 - [ ] Webhook URL registered in Razorpay dashboard pointing to production URL
 - [ ] Database and backend in same region (avoid cross-region latency)
+- [ ] **Domain name + HTTPS/TLS in front of the backend — currently missing.** The deployed VM is served over plain HTTP with no domain (see Architecture/Infrastructure). Payment Flow's Path A (the Razorpay webhook) explicitly requires a public HTTPS URL — right now it cannot function at all, meaning only Path B (frontend verify) confirms payments, with no fallback if the customer's connection drops between Razorpay's success response and that verify call completing. Put a reverse proxy (Nginx/Caddy) with a real cert (Let's Encrypt or Azure-managed) in front of the backend before relying on this in production.
+- [x] Constant-time signature comparison — `verifyWebhookSignature`/`verifyPaymentSignature` used plain `String.equals()` (a timing side-channel) until v4.0; now use `MessageDigest.isEqual()`. See [Version History](#version-history).
+- [x] Payment-confirmation / cleanup-scheduler race — a webhook delayed past the payment timeout window could previously either get silently overwritten by the cleanup job or itself overwrite a just-cleaned-up booking back into the live queue. Fixed in v4.0 with a shared row lock between `PaymentService.confirmPayment()` and `PaymentCleanupScheduler`, plus a guard against resurrecting an already-cancelled booking. See [Version History](#version-history).
 
 ---
 
@@ -859,6 +943,8 @@ VALUES (
 ---
 
 ## 13. Environment Setup
+
+**Note: this section documents the intended/target configuration, not the current state of the tracked `application.properties`.** As covered in Security → Production Checklist, the committed file still has real secrets hardcoded rather than reading from the environment variables below. Treat this section as "what it should look like after that's fixed," not "what's currently deployed."
 
 ### Required Environment Variables
 ```bash
@@ -927,7 +1013,8 @@ cd backend
 ./mvnw spring-boot:run
 
 # Backend starts at http://localhost:8080
-# Flyway runs migrations automatically on startup
+# Hibernate auto-creates/updates the schema on startup (ddl-auto=update) —
+# there's no separate migration step to run
 ```
 
 ### Frontend
@@ -977,14 +1064,28 @@ ip addr show  # Linux
 
 ## 15. Deployment Guide
 
-### Recommended Stack (Phase 1, 0-3 months, ~₹800-1800/month)
+**What's actually running (see Architecture → Infrastructure for details):** a single Azure VM running the Spring Boot backend directly, talking to Azure Database for PostgreSQL, currently reachable over plain HTTP at a raw IP (`frontend/.env.production` points `VITE_API_BASE_URL`/`VITE_WS_URL` at `http://20.192.31.78`) — no domain, no reverse proxy, no TLS cert. There's no Dockerfile or deployment script committed to this repo, so however the app currently gets onto that VM (manual `scp` + `systemd` service, a CI step, etc.) isn't documented here — worth writing down properly once it's decided, since "how does a rebuild actually reach the VM" isn't something this README can currently answer.
+
+**Before this is production-ready as deployed, at minimum:**
+1. Put a domain in front of the VM's IP
+2. Terminate TLS with a reverse proxy (Nginx or Caddy + Let's Encrypt, or an Azure-managed cert) — this is a hard requirement, not a nice-to-have, since the Razorpay webhook (Payment Flow, Path A) only works over HTTPS
+3. Update `frontend/.env.production`'s `VITE_API_BASE_URL`/`VITE_WS_URL` to the new `https://` domain
+4. Update `ALLOWED_ORIGINS` to match
+5. Register the webhook URL in the Razorpay dashboard once HTTPS is live
+6. Actually fix the exposed secrets in `application.properties` and rotate all three credentials — see Production Checklist above; this blocks everything else regardless of hosting
+
+### Original Recommendation (Railway/Supabase/Vercel) — Not What's Deployed
+
+This was the original Phase-1 plan documented here before the move to a VM. Keeping it for reference in case it's revisited (e.g. if the VM approach turns out to be more ops overhead than wanted), but it does not describe the current deployment.
+
+**Recommended Stack (Phase 1, 0-3 months, ~₹800-1800/month)**
 ```
 Backend  → Railway.app (Starter plan)
 Database → Supabase (Free tier, 500MB)
 Frontend → Vercel (Free)
 ```
 
-### Railway Deployment
+**Railway Deployment**
 ```bash
 # 1. Push to GitHub
 # 2. Connect Railway to GitHub repo
@@ -997,7 +1098,7 @@ Frontend → Vercel (Free)
 # 5. Get your Railway URL, e.g. https://salonqueue.railway.app
 ```
 
-### Vercel Deployment
+**Vercel Deployment**
 ```bash
 cd frontend
 # Set environment variables in Vercel dashboard:
@@ -1007,7 +1108,7 @@ cd frontend
 vercel --prod
 ```
 
-### After Deployment
+**After Deployment (Railway/Vercel path)**
 1. Update CORS in `SecurityConfig.java` to include your Vercel domain
 2. Register webhook in Razorpay dashboard: `https://your-railway-url/api/payments/webhook`
 3. Switch Razorpay from test keys to live keys
@@ -1020,6 +1121,12 @@ vercel --prod
 
 ### Single Timezone Assumption (IST hardcoded)
 The JVM's default timezone is pinned to `Asia/Kolkata` at startup (see v3.0 in [Version History](#version-history) — this fixed a real ~5.5 hour display bug). This is correct and deliberate for an India-only app, but it means every `LocalDateTime.now()` call assumes IST. If this app ever serves users outside India, this becomes a real limitation to revisit — the fix then would be storing/transmitting timestamps as `Instant`/UTC with explicit timezone info rather than relying on the server's local wall-clock time.
+
+### No HTTPS on the Deployed Backend
+The current Azure VM deployment is plain HTTP with no domain (see Architecture → Infrastructure and Deployment Guide). This isn't just a generic "should have TLS" concern — Payment Flow's Path A (the Razorpay webhook) specifically requires a public HTTPS URL to function, so right now that path cannot work at all in production. Only Path B (the frontend's own verify call) can confirm a payment, and if the customer's browser closes or loses connection between Razorpay's success response and that verify call completing, there's currently no fallback — the booking stays `PENDING_PAYMENT` until `PaymentCleanupScheduler` cancels it 20 minutes later, even though the customer may have actually paid. Fixing this is a matter of putting a reverse proxy + TLS cert in front of the VM (see Deployment Guide) — not a code change — but it's a real gap in the current live deployment, not a theoretical one.
+
+### Per-Entry Wait Estimates Are Frozen, Not Live (v4.0 trade-off)
+As of v4.0, a customer's individual `estimatedStartTime` is set once when they join the queue and never recalculated afterward — this was a deliberate fix for the no-show timer (see [Version History](#version-history)), since recalculating it live meant an online booking's promised slot could get silently pulled earlier and then falsely flagged as overdue. The trade-off: a customer waiting behind others no longer sees their own estimate improve if people ahead of them finish early or get cancelled — their displayed time is exactly what they were told when they joined, full stop. The salon-wide "if I joined right now" estimate (`GET /wait-time`, shown to prospective customers before joining) is unaffected and still fully live. If dynamic per-entry ETA updates are wanted back without reintroducing the no-show bug, that needs two separate fields — a freely-recalculating display estimate, and a frozen promise the no-show check uses — not built, since nobody's asked for it yet.
 
 ### Chairs Capped at 2
 The queue math and barber dashboard now correctly handle up to 2 active chairs (see [Version History](#version-history) for how). Salons with 3+ chairs are not yet supported — the wait-time simulation would need only a constant changed to extend further, but the shared-device UI and the "any free chair vs. request a specific stylist" question haven't been designed for that case. Deliberately deferred until a real 3+ chair salon needs it.
@@ -1044,10 +1151,11 @@ Several service methods access lazy-loaded JPA relationships (e.g. `payment.getB
 - [x] Fix hardcoded WebSocket URLs → use `VITE_WS_URL`
 - [x] 2-chair queue support
 - [x] Abandoned-payment cleanup (no more silently-orphaned PENDING_PAYMENT rows)
-- [x] Secrets out of tracked `application.properties`
+- [ ] **Secrets out of tracked `application.properties` — NOT actually done, despite being checked off before.** Re-verified as still hardcoded in the tracked file; see Security → Production Checklist. This is a hard blocker, not a nice-to-have.
 - [x] Authorization audit — ownership checks on queue/service mutations, salon creation role check (v3.0)
 - [x] Concurrency audit — locking on position/chair assignment and payment confirmation (v3.0)
-- [ ] **Test the concurrency fixes under real concurrent load** — found and fixed via code-tracing, not a live test; worth deliberately triggering (two devices hitting Start/Finish or completing payments at the same moment) before fully trusting them in production
+- [x] **Extensive manual scenario testing (~1 month)** — not automated concurrent load testing, but deliberate manual testing across every combination the owner could think up (simultaneous walk-ins/bookings, multi-chair no-show timing, payment-confirmation timing). This found and fixed three real bugs: the no-show timer using the wrong clock (twice — see v4.0), the multi-chair no-show blind spot, and the payment-cleanup/webhook race. Still worth a genuine automated concurrent-load test before scaling past a handful of salons — manual testing found real bugs but can't rule out timing-dependent ones that only show up under sustained concurrent traffic.
+- [ ] **Domain name + HTTPS/TLS in front of the backend** — currently a plain-HTTP VM with a raw IP; blocks the Razorpay webhook path entirely (see Known Limitations)
 - [ ] Password reset via OTP (SMS or email)
 - [ ] Opening hours per salon (block bookings outside hours)
 - [ ] QR code auto-generation in admin salon detail page
@@ -1094,9 +1202,12 @@ Several service methods access lazy-loaded JPA relationships (e.g. `payment.getB
 | `.ambient-bg` / `.glass` | Customer-side design tokens (in `index.css`) — dark gradient background and frosted-glass panel classes. Not used on the owner/barber side, which keeps the original light "paper ticket" theme |
 | `-ForUpdate` repository methods | e.g. `findByIdForUpdate` — acquires a pessimistic database row lock before reading, used wherever a value is read and then written back based on that read (queue position, chair assignment, payment status), to prevent two concurrent requests from both reading stale data |
 | `verifySalonOwnership()` | Service-layer check (in `QueueService`/`ServiceService`) that the authenticated caller actually owns the salon they're trying to modify. Required on every new mutating endpoint scoped to a specific salon — Spring Security's role check alone (`SALON_OWNER`) doesn't distinguish "owns *a* salon" from "owns *this* salon" |
+| `estimatedStartTime` | Per-`QueueEntry` field: the arrival/start time actually promised to a customer, computed once when they join and frozen from then on. Drives both the customer's displayed ETA and the no-show cutoff. See v4.0 — this used to be live-recalculated, which caused a real no-show bug |
+| `BookingServiceItem` | Join entity between `Booking` and `Service` (v3.1) — a booking has many of these, one per selected service, each snapshotting that service's name/price/duration at booking time so later renames/repricing don't retroactively change what a past receipt shows |
+| `findOverdueWaitingEntries` | `QueueService` method (v4.0) that the no-show scheduler calls — finds every WAITING entry whose `estimatedStartTime` is overdue AND has an actual free chair available at its position, generalizing correctly to more than one chair |
 
 ---
 
-*Last updated: August 2026 — v3.0*
+*Last updated: September 2026 — v4.0*
 *Built by: Ronak*
 *Stack: Spring Boot + React + PostgreSQL + Razorpay*
