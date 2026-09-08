@@ -156,8 +156,7 @@ export default function CustomerHome() {
   };
 
   const getWaitColor = (minutes) => {
-    if (minutes <= 15) return 'text-sage';
-    if (minutes <= 30) return 'text-brass';
+    if (minutes <= 30) return 'text-ink/70';
     return 'text-rose';
   };
 
@@ -173,7 +172,7 @@ export default function CustomerHome() {
   if (locationState === LOCATION_STATE.ERROR && !navigator.geolocation) {
     return (
       <div className="bg-paper min-h-screen flex items-center justify-center p-4 font-body">
-        <div className="bg-paper-card border border-ink/10 rounded-3xl shadow-xl p-8 sm:p-10 text-center max-w-sm">
+        <div className="bg-paper-card border border-ink/10 rounded-3xl p-8 sm:p-10 text-center max-w-sm">
           <AlertCircle size={44} className="mx-auto text-rose mb-4" />
           <p className="text-lg font-semibold text-ink mb-2 font-display">Location not supported</p>
           <p className="text-ink/50 text-sm leading-relaxed">
@@ -188,7 +187,7 @@ export default function CustomerHome() {
   if (locationState === LOCATION_STATE.DENIED) {
     return (
       <div className="bg-paper min-h-screen flex items-center justify-center p-4 font-body">
-        <div className="bg-paper-card border border-ink/10 rounded-3xl shadow-xl p-8 sm:p-10 text-center max-w-sm">
+        <div className="bg-paper-card border border-ink/10 rounded-3xl p-8 sm:p-10 text-center max-w-sm">
           <MapPin size={44} className="mx-auto text-ink/25 mb-4" />
           <p className="text-lg font-semibold text-ink mb-2 font-display">Location access denied</p>
           <p className="text-ink/50 text-sm mb-6 leading-relaxed">
@@ -210,7 +209,7 @@ export default function CustomerHome() {
   if (locationState === LOCATION_STATE.IDLE) {
     return (
       <div className="bg-paper min-h-screen flex items-center justify-center p-4 font-body">
-        <div className="bg-paper-card border border-ink/10 rounded-[2rem] shadow-2xl p-8 sm:p-10 max-w-sm w-full text-center">
+        <div className="bg-paper-card border border-ink/10 rounded-[2rem] p-8 sm:p-10 max-w-sm w-full text-center">
           <div className="w-16 h-16 bg-rose rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-rose/30 rotate-3">
             <Scissors size={28} className="text-white -rotate-3" />
           </div>
@@ -279,13 +278,13 @@ export default function CustomerHome() {
           <p className="text-base sm:text-xl text-ink/50 font-body">Book instantly, skip the wait</p>
 
           <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 mt-4">
-            <div className="bg-paper-card border border-ink/10 shadow-sm flex items-center gap-1.5 px-3 py-1.5 rounded-full">
-              <div className="w-1.5 h-1.5 bg-sage-bright rounded-full animate-pulse" />
+            <div className="bg-paper-card border border-ink/10 flex items-center gap-1.5 px-3 py-1.5 rounded-full">
+              <div className="w-1.5 h-1.5 bg-rose rounded-full animate-pulse" />
               <p className="text-xs sm:text-sm text-ink/80">
                 Near <span className="font-semibold text-ink">{locationName}</span>
               </p>
               {USE_DEV_LOCATION && (
-                <span className="bg-brass/20 text-brass text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                <span className="bg-ink/10 text-ink/60 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                   DEV
                 </span>
               )}
@@ -308,7 +307,7 @@ export default function CustomerHome() {
             the initial fetch and the "search wider" fallback on empty
             results below) — it's just no longer something the customer
             has to think about up front. */}
-        <div className="bg-paper-card border border-ink/10 rounded-2xl sm:rounded-3xl shadow-xl p-5 sm:p-6 mb-6">
+        <div className="bg-paper-card border border-ink/10 rounded-2xl sm:rounded-3xl p-5 sm:p-6 mb-6">
           <div className="relative">
             <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/35" />
             <input
@@ -352,7 +351,7 @@ export default function CustomerHome() {
               <div
                 key={salon.id}
                 onClick={() => navigate(`/salon/${salon.id}`)}
-                className="bg-paper-card border border-ink/10 rounded-2xl sm:rounded-3xl shadow-sm hover:shadow-lg hover:border-ink/20 overflow-hidden transition-all duration-300 cursor-pointer group active:scale-[0.98] flex"
+                className="bg-paper-card border border-ink/10 rounded-2xl sm:rounded-3xl hover:border-ink/20 overflow-hidden transition-all duration-300 cursor-pointer group active:scale-[0.98] flex"
               >
                 {/* Image — fixed width, stretches to match the row's full
                     height (flex default cross-axis stretch — no fixed
@@ -375,7 +374,7 @@ export default function CustomerHome() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 mb-1">
                       <h3 className="text-base sm:text-xl md:text-2xl font-display font-semibold text-ink truncate">{salon.name}</h3>
-                      {salon.verified && <span className="text-sage flex-shrink-0 text-sm" title="Verified">✓</span>}
+                      {salon.verified && <span className="text-rose flex-shrink-0 text-sm" title="Verified">✓</span>}
                     </div>
                     <div className="flex items-center gap-1.5 text-ink/50 mb-2 sm:mb-3">
                       <MapPin size={12} className="flex-shrink-0" />
@@ -389,7 +388,7 @@ export default function CustomerHome() {
                         width no matter how little room was left). */}
                     <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1 sm:gap-x-4">
                       <div className="flex items-center gap-1 min-w-0">
-                        <Star size={13} className="text-brass fill-brass flex-shrink-0" />
+                        <Star size={13} className="text-ink fill-ink flex-shrink-0" />
                         <span className="font-bold text-ink text-xs sm:text-base">{salon.rating > 0 ? Number(salon.rating).toFixed(1) : '–'}</span>
                         <span className="text-[10px] sm:text-xs text-ink/35">({salon.totalReviews || 0})</span>
                       </div>

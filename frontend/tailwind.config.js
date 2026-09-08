@@ -15,13 +15,21 @@ export default {
       },
       colors: {
         // ── Salon theme tokens ──
+        // True black/white + rose as the single accent, mirroring a
+        // reference design (Claude's own pricing page) the client asked
+        // to match closely: near-black text, pure white surfaces
+        // distinguished only by a thin border (no tint difference between
+        // page and card backgrounds), one accent color used sparingly.
+        // brass/sage are kept defined (unused Tailwind utilities cost
+        // nothing in the built CSS) in case a future design wants them
+        // back — nothing in the app currently references them.
         ink: {
-          DEFAULT: '#221C1D',
-          light: '#3A2F30',
+          DEFAULT: '#171717',
+          light: '#404040',
         },
         paper: {
-          DEFAULT: '#FBF4F0',
-          card: '#FFFCFA',
+          DEFAULT: '#FFFFFF',
+          card: '#FFFFFF',
         },
         rose: {
           DEFAULT: '#E8425F',

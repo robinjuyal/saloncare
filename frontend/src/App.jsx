@@ -9,6 +9,7 @@ import CustomerHome from './pages/CustomerHome';
 import SalonDetails from './pages/SalonDetails';
 import MyBookings from './pages/MyBookings';
 import MySalon from './pages/MySalon';
+import Terms from './pages/Terms';
 
 // Admin
 import AdminLayout from './pages/admin/AdminLayout';
@@ -51,6 +52,8 @@ const AppContent = () => {
         {/* Public */}
         <Route path="/login"  element={user ? getDefaultRoute() : <Login />} />
         <Route path="/signup" element={user ? getDefaultRoute() : <Signup />} />
+        {/* Reachable whether logged in or not — no ProtectedRoute wrapper */}
+        <Route path="/terms" element={<Terms />} />
 
         {/* Customer */}
         <Route path="/home" element={

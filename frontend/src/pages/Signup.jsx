@@ -33,7 +33,7 @@ export default function Signup() {
 
   return (
     <div className="bg-paper min-h-screen flex items-center justify-center p-4 py-10 font-body">
-      <div className="bg-paper-card border border-ink/10 rounded-[2rem] shadow-2xl p-8 sm:p-10 w-full max-w-md">
+      <div className="bg-paper-card border border-ink/10 rounded-[2rem] p-8 sm:p-10 w-full max-w-md">
         <div className="text-center mb-7">
           <div className="w-14 h-14 bg-rose rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-rose/30 rotate-3">
             <Scissors size={24} className="text-white -rotate-3" />
@@ -101,6 +101,13 @@ export default function Signup() {
             <UserPlus size={19} />
             {loading ? 'Creating Account…' : 'Sign Up'}
           </button>
+
+          <p className="text-center text-xs text-ink/40 mt-3">
+            By signing up, you agree to our{' '}
+            <Link to="/terms" className="text-ink/60 hover:text-rose underline underline-offset-2 transition-colors">
+              Terms & Conditions
+            </Link>
+          </p>
         </form>
 
         <div className="mt-7 text-center">

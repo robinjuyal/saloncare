@@ -29,7 +29,7 @@ export default function Login() {
 
   return (
     <div className="bg-paper min-h-screen flex items-center justify-center p-4 font-body">
-      <div className="bg-paper-card border border-ink/10 rounded-[2rem] shadow-2xl p-8 sm:p-10 w-full max-w-md">
+      <div className="bg-paper-card border border-ink/10 rounded-[2rem] p-8 sm:p-10 w-full max-w-md">
         <div className="text-center mb-8">
           <div className="w-14 h-14 bg-rose rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-rose/30 rotate-3">
             <Scissors size={24} className="text-white -rotate-3" />

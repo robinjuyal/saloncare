@@ -283,7 +283,7 @@ export default function SalonDetails() {
       <div className="bg-paper min-h-screen flex items-center justify-center p-4 font-body">
         <div className="max-w-md w-full">
           <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-sage rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-sage/30">
+            <div className="w-16 h-16 bg-ink rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-ink/20">
               <CheckCircle size={32} className="text-white" />
             </div>
             <h1 className="text-3xl font-display font-semibold text-ink mb-1">Booking Confirmed</h1>
@@ -292,7 +292,7 @@ export default function SalonDetails() {
 
           {/* ── Ticket stub ── perforated-token confirmation, the app's
               digital version of the paper number every salon hands out */}
-          <div className="bg-paper-card border border-ink/10 rounded-2xl shadow-2xl overflow-hidden">
+          <div className="bg-paper-card border border-ink/10 rounded-2xl overflow-hidden">
             <div className="p-6 sm:p-7 text-center">
               <p className="text-xs font-bold text-ink/40 uppercase tracking-widest mb-1">Booking Code</p>
               <p className="text-4xl font-mono font-bold text-rose tracking-wider">{successBooking.bookingCode}</p>
@@ -313,7 +313,7 @@ export default function SalonDetails() {
               </div>
               <div className="flex justify-between pt-3 border-t border-dashed border-ink/10">
                 <span className="text-ink/50">Amount Paid</span>
-                <span className="font-bold text-sage text-lg font-mono">₹{successBooking.amount}</span>
+                <span className="font-bold text-rose text-lg font-mono">₹{successBooking.amount}</span>
               </div>
             </div>
           </div>
@@ -389,7 +389,7 @@ export default function SalonDetails() {
               </div>
             </div>
             <div className="flex sm:flex-col items-center sm:items-end gap-2">
-              <div className="flex items-center gap-1.5 text-brass">
+              <div className="flex items-center gap-1.5 text-ink">
                 <Star size={22} fill="currentColor" />
                 <span className="text-2xl sm:text-3xl font-display font-semibold text-ink">{Number(salon.rating || 0).toFixed(1)}</span>
               </div>
@@ -409,11 +409,11 @@ export default function SalonDetails() {
                   (2s), smooth opacity breathe, not a hard blink, so it
                   draws the eye to the number that matters most without
                   being obnoxious about it. */}
-              <div className="text-xl sm:text-2xl font-display font-semibold text-brass animate-pulse">{waitMinutes} min</div>
+              <div className="text-xl sm:text-2xl font-display font-semibold text-rose animate-pulse">{waitMinutes} min</div>
               <div className="text-[11px] sm:text-xs text-ink/45 font-medium mt-0.5">Total Wait</div>
             </div>
             <div className="text-center">
-              <div className="text-xl sm:text-2xl font-display font-semibold text-sage">{salon.totalChairs || 1}</div>
+              <div className="text-xl sm:text-2xl font-display font-semibold text-ink">{salon.totalChairs || 1}</div>
               <div className="text-[11px] sm:text-xs text-ink/45 font-medium mt-0.5">Chair{(salon.totalChairs || 1) > 1 ? 's' : ''}</div>
             </div>
           </div>
@@ -563,7 +563,7 @@ export default function SalonDetails() {
 
                   <div className="border-t border-ink/10 pt-3 space-y-2">
                     <div className="flex justify-between"><span className="text-ink/50">Total Duration</span><span className="font-semibold text-ink">{totalDuration} min</span></div>
-                    <div className="flex justify-between items-center"><span className="text-ink/50">Total Price</span><span className="font-mono font-bold text-brass text-base">₹{totalPrice}</span></div>
+                    <div className="flex justify-between items-center"><span className="text-ink/50">Total Price</span><span className="font-mono font-bold text-rose text-base">₹{totalPrice}</span></div>
                   </div>
                 </div>
 
@@ -612,8 +612,8 @@ export default function SalonDetails() {
           <div className="bg-paper-card border border-ink/10 rounded-2xl p-5 sm:p-6">
             <div className="flex items-center justify-between mb-5 sm:mb-6">
               <h2 className="text-xl sm:text-2xl font-display font-semibold text-ink">Live Queue</h2>
-              <div className="bg-sage/20 text-sage px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-sage-bright rounded-full animate-pulse" /> LIVE
+              <div className="bg-rose/15 text-rose px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 bg-rose rounded-full animate-pulse" /> LIVE
               </div>
             </div>
             {queue.length === 0 ? (
@@ -626,16 +626,16 @@ export default function SalonDetails() {
               <div className="space-y-2.5">
                 {queue.map((entry, index) => (
                   <div key={entry.id}
-                    className={`p-3.5 rounded-xl ${entry.status === 'IN_PROGRESS' ? 'bg-sage/15 border border-sage/30' : 'bg-paper-card border border-ink/10'}`}>
+                    className={`p-3.5 rounded-xl ${entry.status === 'IN_PROGRESS' ? 'bg-rose/10 border border-rose/25' : 'bg-paper-card border border-ink/10'}`}>
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-mono font-bold text-sm flex-shrink-0 ${entry.status === 'IN_PROGRESS' ? 'bg-sage text-white' : 'bg-ink/15 text-ink'}`}>
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-mono font-bold text-sm flex-shrink-0 ${entry.status === 'IN_PROGRESS' ? 'bg-rose text-white' : 'bg-ink/15 text-ink'}`}>
                         {index + 1}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-ink text-sm truncate">{entry.serviceName}</div>
                         <div className="text-xs text-ink/50">
                           {entry.status === 'IN_PROGRESS'
-                            ? <span className="text-sage font-bold">In Progress</span>
+                            ? <span className="text-rose font-bold">In Progress</span>
                             : <span>~{entry.estimatedDurationMinutes} min</span>}
                         </div>
                       </div>
@@ -692,7 +692,7 @@ export default function SalonDetails() {
                       {[1,2,3,4,5].map(s => (
                         <Star key={s} size={13} className={
                           s <= review.rating
-                            ? 'fill-brass text-brass'
+                            ? 'fill-ink text-ink'
                             : 'fill-ink/10 text-ink/15'
                         } />
                       ))}

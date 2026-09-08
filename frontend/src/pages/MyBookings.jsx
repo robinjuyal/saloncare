@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { bookingAPI, reviewAPI } from '../services/api';
 import { Calendar, Clock, MapPin, Tag, CheckCircle, XCircle, AlertCircle, RefreshCw, Star } from 'lucide-react';
 
@@ -36,7 +36,7 @@ function ReviewModal({ salonName, onClose, onSubmit }) {
                 size={34}
                 className={`transition-colors ${
                   star <= (hovered || rating)
-                    ? 'fill-brass text-brass'
+                    ? 'fill-ink text-ink'
                     : 'text-ink/15'
                 }`}
               />
@@ -162,9 +162,9 @@ export default function MyBookings() {
   };
 
   const statusConfig = {
-    CONFIRMED:       { bg: 'bg-rose/20',   text: 'text-rose',       icon: AlertCircle,  label: 'Confirmed'       },
-    IN_PROGRESS:     { bg: 'bg-brass/20',  text: 'text-brass',      icon: Clock,        label: 'In Progress'     },
-    COMPLETED:       { bg: 'bg-sage/20',   text: 'text-sage',icon: CheckCircle,  label: 'Completed'       },
+    CONFIRMED:       { bg: 'bg-rose/15',  text: 'text-rose',     icon: AlertCircle,  label: 'Confirmed'       },
+    IN_PROGRESS:     { bg: 'bg-rose/15',  text: 'text-rose',     icon: Clock,        label: 'In Progress'     },
+    COMPLETED:       { bg: 'bg-ink/10',   text: 'text-ink/60',   icon: CheckCircle,  label: 'Completed'       },
     CANCELLED:       { bg: 'bg-ink/10',  text: 'text-ink/60',   icon: XCircle,      label: 'Cancelled'       },
     NO_SHOW:         { bg: 'bg-ink/10',  text: 'text-ink/60',   icon: XCircle,      label: 'No Show'         },
     PENDING_PAYMENT: { bg: 'bg-ink/8',   text: 'text-ink/40',   icon: Clock,        label: 'Pending Payment' },
@@ -265,7 +265,7 @@ export default function MyBookings() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-[11px] text-ink/35 mb-0.5">Amount</p>
-                    <p className="font-mono font-bold text-sage text-xs sm:text-sm">₹{booking.amount}</p>
+                    <p className="font-mono font-bold text-rose text-xs sm:text-sm">₹{booking.amount}</p>
                   </div>
                 </div>
 
@@ -304,7 +304,7 @@ export default function MyBookings() {
                           {booking.salonId && (
                             <button
                               onClick={loadBookings}
-                              className="flex items-center gap-1 text-xs text-brass font-semibold hover:text-brass/80 transition"
+                              className="flex items-center gap-1 text-xs text-ink/50 font-semibold hover:text-ink/80 transition"
                             >
                               <RefreshCw size={12} /> Refresh
                             </button>
@@ -325,7 +325,7 @@ export default function MyBookings() {
 
                 {/* ── IN_PROGRESS strip ── */}
                 {booking.status === 'IN_PROGRESS' && (
-                  <div className="border-t border-brass/25 bg-brass/15 px-4 sm:px-5 py-3 flex items-center gap-2 text-brass text-sm font-semibold">
+                  <div className="border-t border-rose/25 bg-rose/10 px-4 sm:px-5 py-3 flex items-center gap-2 text-rose text-sm font-semibold">
                     <Clock size={16} className="animate-pulse flex-shrink-0" />
                     Your service is currently in progress!
                   </div>
@@ -333,8 +333,8 @@ export default function MyBookings() {
 
                 {/* ── COMPLETED strip ── */}
                 {booking.status === 'COMPLETED' && (
-                  <div className="border-t border-sage/25 bg-sage/15 px-4 sm:px-5 py-3 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-sage text-xs sm:text-sm font-semibold min-w-0">
+                  <div className="border-t border-ink/15 bg-ink/5 px-4 sm:px-5 py-3 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-ink/60 text-xs sm:text-sm font-semibold min-w-0">
                       <CheckCircle size={16} className="flex-shrink-0" />
                       <span className="truncate">Service completed — thank you!</span>
                     </div>
@@ -346,14 +346,14 @@ export default function MyBookings() {
                           salonName: booking.salonName,
                           bookingCode: booking.bookingCode,
                         })}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-brass hover:bg-brass/90 text-white rounded-lg text-xs font-bold transition flex-shrink-0"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-rose hover:bg-rose-dark text-white rounded-lg text-xs font-bold transition flex-shrink-0"
                       >
                         <Star size={12} /> Review
                       </button>
                     )}
                     {reviewStatuses[booking.bookingCode] === 'already_reviewed' && (
-                      <span className="flex items-center gap-1 text-xs text-sage font-medium flex-shrink-0">
-                        <Star size={12} className="fill-brass text-brass" /> Reviewed
+                      <span className="flex items-center gap-1 text-xs text-ink/50 font-medium flex-shrink-0">
+                        <Star size={12} className="fill-ink text-ink" /> Reviewed
                       </span>
                     )}
                   </div>
@@ -396,6 +396,12 @@ export default function MyBookings() {
             ))}
           </div>
         )}
+
+        <p className="text-center text-xs text-ink/35 mt-8">
+          <Link to="/terms" className="hover:text-ink/60 underline underline-offset-2 transition-colors">
+            Terms & Conditions
+          </Link>
+        </p>
       </div>
     </div>
   );
