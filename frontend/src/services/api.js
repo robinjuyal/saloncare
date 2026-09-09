@@ -1,47 +1,11 @@
 import axios from 'axios';
 
-// Dynamically resolve API Base URL so that testing works on localhost,
-// local network devices (tablets, mobiles on same Wi-Fi), or cloud production.
-const getApiBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+export const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8080/ws';
 
-  // 1. If explicit production cloud URL is configured (e.g. Azure / custom domain)
-  if (envUrl && !envUrl.includes('localhost') && !envUrl.startsWith('http://192.168.') && !envUrl.startsWith('http://10.')) {
-    return `${envUrl}/api`;
-  }
-
-  // 2. In browser development:
-  // If Vite's dev server is serving the app (e.g. port 3000 or 5173),
-  // using relative '/api' forwards requests through Vite's built-in proxy (in vite.config.js).
-  // This completely eliminates CORS issues and works on ANY device (phone, tablet, laptop)
-  // regardless of DHCP IP changes.
-  if (typeof window !== 'undefined' && window.location.port && (window.location.port === '3000' || window.location.port === '5173')) {
-    return '/api';
-  }
-
-  // 3. If accessing directly by IP on a different port or direct backend access:
-  if (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost') {
-    return `http://${window.location.hostname}:8080/api`;
-  }
-
-  return envUrl ? `${envUrl}/api` : 'http://localhost:8080/api';
-};
-
-export const getWsUrl = () => {
-  const envWs = import.meta.env.VITE_WS_URL;
-  if (envWs && !envWs.includes('localhost') && !envWs.startsWith('http://192.168.') && !envWs.startsWith('http://10.')) {
-    return envWs;
-  }
-  if (typeof window !== 'undefined' && window.location.hostname) {
-    return `http://${window.location.hostname}:8080/ws`;
-  }
-  return 'http://localhost:8080/ws';
-};
-
-export const WS_URL = getWsUrl();
 
 const api = axios.create({
-  baseURL: getApiBaseUrl(),
+  baseURL: `${API_BASE_URL}/api`,
   headers: { 'Content-Type': 'application/json' },
 });
 
