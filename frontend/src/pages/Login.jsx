@@ -21,7 +21,11 @@ export default function Login() {
       login(response.data.data);
       navigate(response.data.data.role === 'SALON_OWNER' ? '/dashboard' : '/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      if (!err.response) {
+        setError('Cannot connect to backend server. Please verify your connection.');
+      } else {
+        setError(err.response?.data?.message || 'Login failed');
+      }
     } finally {
       setLoading(false);
     }

@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Check, Timer } from 'lucide-react';
+import { User, Check, Timer, Play, Clock, Sparkles, CheckCircle2 } from 'lucide-react';
 
 /**
- * One chair's "currently serving" card. Fully self-contained — owns its
- * own elapsed-time timer keyed off `entry.actualStartTime`, so two of
- * these can sit side by side on one shared screen without stepping on
- * each other's state (each chair's clock is independent).
- *
- * entry = the IN_PROGRESS queue entry seated in this chair, or null if
- * the chair is empty right now.
+ * Modern, lightweight ChairCard for Barber Dashboard.
+ * Displays active customer in chair or vacant state with instant quick-start action.
  */
-export default function ChairCard({ chairNumber, entry, onComplete, twoChairMode }) {
+export default function ChairCard({
+  chairNumber,
+  entry,
+  onComplete,
+  twoChairMode,
+  nextWaitingCustomer,
+  onStartNext,
+}) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const intervalRef = useRef(null);
 
@@ -40,86 +42,193 @@ export default function ChairCard({ chairNumber, entry, onComplete, twoChairMode
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const isOverrunning = entry && Math.floor(elapsedSeconds / 60) > entry.estimatedDurationMinutes;
+  const estimatedMins = entry?.estimatedDurationMinutes || 30;
+  const elapsedMins = Math.floor(elapsedSeconds / 60);
+  const isOverrunning = entry && elapsedMins > estimatedMins;
+  const overrunMins = isOverrunning ? elapsedMins - estimatedMins : 0;
   const progressPct = entry
-    ? Math.min(100, ((elapsedSeconds / 60) / entry.estimatedDurationMinutes) * 100)
+    ? Math.min(100, Math.round(((elapsedSeconds / 60) / estimatedMins) * 100))
     : 0;
 
+  // Initials for avatar
+  const initials = entry?.customerName
+    ? entry.customerName
+        .split(' ')
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase()
+    : '';
+
   return (
-    <div className={`relative rounded-2xl shadow-lg p-6 transition-all font-body ${
-      entry ? 'bg-ink text-paper' : 'bg-paper-card border-2 border-dashed border-ink/12 text-ink'
-    }`}>
-      {/* Chair badge — only shown when two chairs are active, so a single-chair
-          salon's screen stays exactly as simple as it's always been. */}
-      {twoChairMode && (
-        <div className={`absolute top-4 right-4 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
-          entry ? 'bg-paper/15 text-paper' : 'bg-ink/8 text-ink/50'
-        }`}>
-          CHAIR {chairNumber}
+    <div
+      className={`relative rounded-2xl border transition-all duration-200 overflow-hidden ${
+        entry
+          ? isOverrunning
+            ? 'bg-white border-amber-300 shadow-md shadow-amber-500/5 ring-1 ring-amber-300/60'
+            : 'bg-white border-slate-200 shadow-sm hover:shadow-md'
+          : 'bg-slate-50/80 border-dashed border-2 border-slate-300/80'
+      }`}
+    >
+      {/* Top Header Bar */}
+      <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-slate-100 flex items-center justify-between gap-1.5">
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-2 h-2 rounded-full shrink-0 ${
+              entry
+                ? isOverrunning
+                  ? 'bg-amber-500 animate-pulse'
+                  : 'bg-emerald-500 animate-pulse'
+                : 'bg-slate-400'
+            }`}
+          />
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-700 whitespace-nowrap">
+            Chair {chairNumber}
+          </span>
+          <span
+            className={`text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded font-semibold whitespace-nowrap ${
+              entry
+                ? isOverrunning
+                  ? 'bg-amber-100 text-amber-800'
+                  : 'bg-emerald-100 text-emerald-800'
+                : 'bg-slate-200 text-slate-600'
+            }`}
+          >
+            {entry ? (isOverrunning ? 'Running Over' : 'In Service') : 'Available'}
+          </span>
         </div>
-      )}
+
+        {entry?.type && (
+          <span
+            className={`text-[10px] sm:text-[11px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 whitespace-nowrap shrink-0 ${
+              entry.type === 'ONLINE_BOOKING'
+                ? 'bg-blue-50 text-blue-700 border border-blue-200/80'
+                : 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
+            }`}
+          >
+            {entry.type === 'ONLINE_BOOKING' ? (
+              <>
+                <CheckCircle2 size={11} className="text-blue-600" /> Paid Online
+              </>
+            ) : (
+              'Walk-in'
+            )}
+          </span>
+        )}
+      </div>
 
       {entry ? (
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="bg-rose/20 backdrop-blur-sm p-3 rounded-full">
-              <User size={24} className="text-rose" />
+        /* Occupied Chair State */
+        <div className="p-3 sm:p-3.5 md:p-4">
+          <div className="flex items-center gap-2.5 sm:gap-3 mb-2.5 sm:mb-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-900 text-white font-bold flex items-center justify-center text-xs sm:text-sm shadow-xs shrink-0">
+              {initials || <User size={16} />}
             </div>
-            <div className="min-w-0">
-              <div className="text-xs text-paper/50 font-medium uppercase tracking-wide">Currently Serving</div>
-              <div className="text-xl sm:text-2xl font-display font-semibold truncate">{entry.customerName}</div>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate leading-snug">
+                {entry.customerName}
+              </h3>
+              <p className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">
+                {entry.serviceName}
+              </p>
             </div>
           </div>
 
-          {entry.type === 'ONLINE_BOOKING' && (
-            <div className="inline-block bg-sage text-white px-3 py-1 rounded-full text-xs font-bold shadow mb-4">
-              PAID ONLINE
-            </div>
-          )}
-
-          <div className="grid grid-cols-3 gap-3 mb-5 bg-paper/8 rounded-xl p-4">
+          {/* Service & Timer Metric Grid */}
+          <div className="grid grid-cols-[1.2fr_0.9fr_0.9fr] gap-1 sm:gap-1.5 bg-slate-50/90 rounded-xl p-2 sm:p-2.5 mb-2.5 border border-slate-100">
             <div className="min-w-0">
-              <div className="text-[11px] text-paper/50">Service</div>
-              <div className="text-sm font-semibold truncate">{entry.serviceName}</div>
+              <span className="text-[9px] sm:text-[10px] font-semibold text-slate-400 block uppercase tracking-wider truncate">
+                Service
+              </span>
+              <span className="text-xs sm:text-[13px] font-semibold text-slate-800 truncate block" title={entry.serviceName}>
+                {entry.serviceName}
+              </span>
             </div>
-            <div>
-              <div className="text-[11px] text-paper/50">Duration</div>
-              <div className="text-sm font-semibold font-mono">{entry.estimatedDurationMinutes} min</div>
+            <div className="min-w-0">
+              <span className="text-[9px] sm:text-[10px] font-semibold text-slate-400 block uppercase tracking-wider">
+                Expected
+              </span>
+              <span className="text-xs sm:text-[13px] font-semibold text-slate-800 font-mono block">
+                {estimatedMins} min
+              </span>
             </div>
-            <div>
-              <div className="text-[11px] text-paper/50 flex items-center gap-1">
-                <Timer size={11} /> Elapsed
-              </div>
-              <div className={`text-base font-bold font-mono ${isOverrunning ? 'text-rose' : 'text-paper'}`}>
+            <div className="min-w-0">
+              <span className="text-[9px] sm:text-[10px] font-semibold text-slate-400 block uppercase tracking-wider flex items-center gap-0.5">
+                <Timer size={10} /> Elapsed
+              </span>
+              <span
+                className={`text-xs sm:text-[13px] font-bold font-mono block ${
+                  isOverrunning ? 'text-amber-600' : 'text-slate-900'
+                }`}
+              >
                 {formatTimer(elapsedSeconds)}
-              </div>
+              </span>
             </div>
           </div>
 
-          <div className="mb-5">
-            <div className="w-full bg-paper/15 rounded-full h-2">
+          {/* Progress Bar & Overrun Badge */}
+          <div className="mb-2.5 sm:mb-3">
+            <div className="flex justify-between items-center text-[11px] mb-1 font-medium">
+              <span className="text-slate-500">Service Progress</span>
+              {isOverrunning ? (
+                <span className="text-amber-700 font-semibold bg-amber-50 px-1.5 py-0.5 rounded text-[10px] border border-amber-200">
+                  +{overrunMins}m overtime
+                </span>
+              ) : (
+                <span className="text-slate-600 font-mono text-[11px]">
+                  {progressPct}% complete
+                </span>
+              )}
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
               <div
-                className={`h-2 rounded-full transition-all duration-1000 ${isOverrunning ? 'bg-rose' : 'bg-sage'}`}
+                className={`h-full rounded-full transition-all duration-1000 ${
+                  isOverrunning
+                    ? 'bg-amber-500'
+                    : 'bg-gradient-to-r from-emerald-500 to-teal-500'
+                }`}
                 style={{ width: `${progressPct}%` }}
               />
             </div>
           </div>
 
+          {/* Complete Button */}
           <button
             onClick={() => onComplete(entry.id)}
-            className="w-full bg-rose hover:bg-rose-dark text-white py-3.5 rounded-xl font-bold text-base transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shadow-rose/25"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white py-2 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
           >
-            <Check size={20} />
-            Finish
+            <Check size={15} />
+            <span>Complete Service</span>
           </button>
         </div>
       ) : (
-        <div className="text-center py-10">
-          <User size={40} className="mx-auto mb-3 text-ink/25" />
-          <div className="text-base font-display font-semibold mb-1 text-ink/60">
-            {twoChairMode ? `Chair ${chairNumber} is free` : 'No Customer in Chair'}
+        /* Vacant Chair State */
+        <div className="p-3.5 sm:p-5 text-center flex flex-col items-center justify-center min-h-[140px] sm:min-h-[160px]">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center justify-center mb-2 text-slate-400">
+            <User size={18} />
           </div>
-          <div className="text-sm text-ink/40">Start serving the next customer from queue</div>
+          <h4 className="text-xs sm:text-sm font-semibold text-slate-800 mb-1">
+            Chair {chairNumber} is Open
+          </h4>
+
+          {nextWaitingCustomer && onStartNext ? (
+            <div className="mt-2 w-full max-w-xs">
+              <p className="text-[11px] text-slate-500 mb-1.5">Next in queue waiting for service:</p>
+              <button
+                onClick={() => onStartNext(nextWaitingCustomer)}
+                className="w-full bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white py-1.5 sm:py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                <Play size={12} className="fill-current text-white shrink-0" />
+                <span className="truncate">
+                  Seat {nextWaitingCustomer.customerName} ({nextWaitingCustomer.serviceName})
+                </span>
+              </button>
+            </div>
+          ) : (
+            <p className="text-[11px] text-slate-400 max-w-xs">
+              Waiting for next walk-in customer or online booking
+            </p>
+          )}
         </div>
       )}
     </div>

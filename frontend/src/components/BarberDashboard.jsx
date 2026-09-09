@@ -1,6 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Clock, Plus, Play, AlertCircle, Trash2, XCircle, Scissors, Phone } from 'lucide-react';
-import { queueAPI, serviceAPI, salonAPI } from '../services/api';
+import {
+  Clock,
+  Plus,
+  Play,
+  AlertCircle,
+  Trash2,
+  XCircle,
+  Scissors,
+  Phone,
+  CheckCircle2,
+  Users,
+  CreditCard,
+  UserCheck,
+  Armchair,
+  Radio,
+  Timer
+} from 'lucide-react';
+import { queueAPI, serviceAPI, salonAPI, WS_URL } from '../services/api';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import ChairCard from './ChairCard';
@@ -13,6 +29,7 @@ export default function BarberDashboard({ salonId }) {
   const [chairToggleLoading, setChairToggleLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showAddWalkin, setShowAddWalkin] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
   const [cancelModal, setCancelModal] = useState({
     open: false,
     queueEntry: null,
@@ -22,13 +39,10 @@ export default function BarberDashboard({ salonId }) {
   const [services, setServices] = useState([]);
   const [walkinData, setWalkinData] = useState({
     customerName: '',
-    serviceId: null
+    serviceId: null,
   });
 
-  // In-memory + localStorage cache of estimated-arrival "floors", so a
-  // waiting customer's displayed wait time never visibly jumps backward
-  // between server updates — it can only move later, never earlier.
-  // Key: queueEntry.id (string) → estimated arrival ms
+  // In-memory + localStorage cache of estimated-arrival "floors"
   const estimatedFloorRef = useRef({});
   const FLOOR_LS_KEY = `barber_queue_floors_${salonId}`;
 
@@ -36,21 +50,27 @@ export default function BarberDashboard({ salonId }) {
     try {
       const stored = localStorage.getItem(FLOOR_LS_KEY);
       if (stored) estimatedFloorRef.current = JSON.parse(stored);
-    } catch { /* ignore corrupt data */ }
+    } catch {
+      /* ignore corrupt data */
+    }
   };
 
   const persistFloor = (entryId, ms) => {
     estimatedFloorRef.current[entryId] = ms;
     try {
       localStorage.setItem(FLOOR_LS_KEY, JSON.stringify(estimatedFloorRef.current));
-    } catch { /* ignore quota errors */ }
+    } catch {
+      /* ignore quota errors */
+    }
   };
 
   const clearFloor = (entryId) => {
     delete estimatedFloorRef.current[entryId];
     try {
       localStorage.setItem(FLOOR_LS_KEY, JSON.stringify(estimatedFloorRef.current));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   useEffect(() => {
@@ -68,10 +88,11 @@ export default function BarberDashboard({ salonId }) {
   }, [salonId]);
 
   const connectWebSocket = () => {
-    const socket = new SockJS(import.meta.env.VITE_WS_URL || 'http://localhost:8080/ws');
+    const socket = new SockJS(WS_URL);
     const stompClient = new Client({
       webSocketFactory: () => socket,
       onConnect: () => {
+        setWsConnected(true);
         stompClient.subscribe(`/topic/queue/${salonId}`, (message) => {
           try {
             const updatedQueue = JSON.parse(message.body);
@@ -81,12 +102,14 @@ export default function BarberDashboard({ salonId }) {
           }
         });
       },
-      onDisconnect: () => console.log('WebSocket disconnected'),
-      onStompError: (frame) => console.error('STOMP error:', frame),
+      onDisconnect: () => setWsConnected(false),
+      onStompError: (frame) => {
+        console.error('STOMP error:', frame);
+        setWsConnected(false);
+      },
     });
 
     stompClient.activate();
-
     return () => {
       if (stompClient && stompClient.active) stompClient.deactivate();
     };
@@ -105,13 +128,11 @@ export default function BarberDashboard({ salonId }) {
   const handleToggleChairs = async (newCount) => {
     if (newCount === totalChairs || chairToggleLoading) return;
     const previous = totalChairs;
-    setTotalChairs(newCount); // optimistic — feels instant
+    setTotalChairs(newCount); // optimistic UI
     setChairToggleLoading(true);
+
     try {
       await salonAPI.updateChairs(salonId, newCount);
-      // Positions/wait-times for everyone waiting depend on chair count,
-      // so refresh the queue right away rather than waiting for the
-      // next natural update.
       loadQueue();
     } catch (error) {
       console.error('Error updating chair count:', error);
@@ -155,13 +176,14 @@ export default function BarberDashboard({ salonId }) {
 
   const updateQueueState = (queueData) => {
     const inProgress = queueData
-      .filter(entry => entry.status === 'IN_PROGRESS')
+      .filter((entry) => entry.status === 'IN_PROGRESS')
       .sort((a, b) => (a.chairNumber || 1) - (b.chairNumber || 1));
-    const waitingQueue = queueData.filter(entry => entry.status === 'WAITING');
 
-    // Clear floors for entries no longer waiting (started, cancelled, removed)
-    const waitingIds = new Set(waitingQueue.map(e => String(e.id)));
-    Object.keys(estimatedFloorRef.current).forEach(id => {
+    const waitingQueue = queueData.filter((entry) => entry.status === 'WAITING');
+
+    // Clear floors for entries no longer waiting
+    const waitingIds = new Set(waitingQueue.map((e) => String(e.id)));
+    Object.keys(estimatedFloorRef.current).forEach((id) => {
       if (!waitingIds.has(id)) clearFloor(id);
     });
 
@@ -173,17 +195,10 @@ export default function BarberDashboard({ salonId }) {
     return date.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: true
+      hour12: true,
     });
   };
 
-  /**
-   * The backend already computes an accurate estimatedStartTime per waiting
-   * entry — factoring in however many chairs are active right now, and
-   * whichever chair frees up soonest for that specific customer. We just
-   * apply a "never move backward" floor on top so the displayed number
-   * doesn't visibly flicker earlier between updates.
-   */
   const getEstimatedArrivalMs = (entry) => {
     const serverMs = entry.estimatedStartTime
       ? new Date(entry.estimatedStartTime).getTime()
@@ -203,14 +218,15 @@ export default function BarberDashboard({ salonId }) {
 
   const handleAddWalkin = async () => {
     if (!walkinData.customerName || !walkinData.serviceId) {
-      alert('Please fill all fields');
+      alert('Please fill customer name and choose a service');
       return;
     }
+
     try {
       await queueAPI.addWalkIn({
         salonId,
         serviceId: walkinData.serviceId,
-        customerName: walkinData.customerName
+        customerName: walkinData.customerName,
       });
       setShowAddWalkin(false);
       setWalkinData({ customerName: '', serviceId: null });
@@ -221,8 +237,6 @@ export default function BarberDashboard({ salonId }) {
     }
   };
 
-  // No chair number needs to be picked here — the backend assigns the
-  // lowest-numbered free chair automatically.
   const handleStartService = async (queueEntry) => {
     try {
       await queueAPI.startService(queueEntry.id);
@@ -231,7 +245,7 @@ export default function BarberDashboard({ salonId }) {
     } catch (error) {
       console.error('Error starting service:', error);
       alert(error.response?.data?.message || 'Failed to start service — no chair may be free right now.');
-      loadQueue(); // resync in case another device/tab already grabbed the chair
+      loadQueue();
     }
   };
 
@@ -247,10 +261,10 @@ export default function BarberDashboard({ salonId }) {
   };
 
   const CANCEL_REASONS = [
-    { key: 'SALON_EMERGENCY', label: 'Salon Emergency', description: 'Unexpected situation requiring us to close or stop services' },
-    { key: 'RUNNING_TOO_LATE', label: 'Running Too Late', description: 'Queue is running significantly behind and we cannot accommodate you today' },
-    { key: 'OVERBOOKING', label: 'Overbooking Error', description: 'Too many customers were booked by mistake' },
-    { key: 'OTHER', label: 'Other Reason', description: 'Another reason not listed above' },
+    { key: 'SALON_EMERGENCY', label: 'Salon Emergency', description: 'Unexpected emergency or store closure' },
+    { key: 'RUNNING_TOO_LATE', label: 'Running Too Late', description: 'Schedule heavily delayed and cannot seat today' },
+    { key: 'OVERBOOKING', label: 'Overbooking Error', description: 'Accidental overlap or excess queue' },
+    { key: 'OTHER', label: 'Other Reason', description: 'Any other unforeseen circumstance' },
   ];
 
   const openCancelModal = (customer) => {
@@ -263,7 +277,8 @@ export default function BarberDashboard({ salonId }) {
 
   const handleCancelOnlineBooking = async () => {
     if (!cancelModal.reason) return;
-    setCancelModal(prev => ({ ...prev, loading: true }));
+    setCancelModal((prev) => ({ ...prev, loading: true }));
+
     try {
       await queueAPI.cancelOnlineBooking(cancelModal.queueEntry.id, cancelModal.reason);
       closeCancelModal();
@@ -271,7 +286,7 @@ export default function BarberDashboard({ salonId }) {
     } catch (error) {
       console.error('Error cancelling booking:', error);
       alert('Failed to cancel booking. Please try again.');
-      setCancelModal(prev => ({ ...prev, loading: false }));
+      setCancelModal((prev) => ({ ...prev, loading: false }));
     }
   };
 
@@ -290,346 +305,436 @@ export default function BarberDashboard({ salonId }) {
   const twoChairMode = totalChairs === 2;
   const freeChairsCount = Math.max(0, totalChairs - inProgressEntries.length);
 
-  // One ChairCard per active chair — chair N shows whichever IN_PROGRESS
-  // entry has that chairNumber, or an empty state if none.
+  // Map chair slots 1..totalChairs
   const chairSlots = Array.from({ length: totalChairs }, (_, i) => {
     const chairNumber = i + 1;
-    const entry = inProgressEntries.find(e => (e.chairNumber || 1) === chairNumber) || null;
+    const entry = inProgressEntries.find((e) => (e.chairNumber || 1) === chairNumber) || null;
     return { chairNumber, entry };
   });
 
   return (
-    <div className="min-h-screen bg-paper p-3 sm:p-4 font-body">
-      <div className="max-w-4xl mx-auto">
-
-        {/* Header */}
-        <div className="bg-paper-card rounded-2xl shadow-sm border border-ink/8 p-5 sm:p-6 mb-4">
-          <div className="flex justify-between items-center flex-wrap gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-display font-semibold text-ink flex items-center gap-2">
-                <div className="w-9 h-9 bg-rose rounded-xl flex items-center justify-center rotate-3 flex-shrink-0">
-                  <Scissors size={17} className="text-white -rotate-3" />
+    <div className="min-h-screen bg-slate-50 text-slate-800 p-2.5 sm:p-4 md:p-5 font-sans">
+      <div className="max-w-5xl mx-auto space-y-3 sm:space-y-4">
+        
+        {/* ── Top Header & Chair Control Bar ── */}
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-3 sm:p-3.5 md:p-4">
+          <div className="flex flex-col min-[600px]:flex-row min-[600px]:items-center justify-between gap-2.5 sm:gap-3">
+            
+            {/* Title & Live Status */}
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs shrink-0">
+                <Scissors size={18} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                  <h1 className="text-base sm:text-lg md:text-xl font-bold text-slate-900 tracking-tight whitespace-nowrap">
+                    Barber Dashboard
+                  </h1>
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold shrink-0 whitespace-nowrap ${
+                      wsConnected
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        wsConnected ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                      }`}
+                    />
+                    {wsConnected ? 'Live Connected' : 'Syncing'}
+                  </span>
                 </div>
-                Barber Dashboard
-              </h1>
-              <p className="text-ink/50 mt-1 text-sm">Manage your queue in real-time</p>
+                <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate hidden min-[500px]:block">
+                  Real-time chair and queue management
+                </p>
+              </div>
             </div>
-            <div className="text-right">
-              <div className="text-3xl sm:text-4xl font-mono font-bold text-ink">{formatTime(currentTime)}</div>
-              <div className="text-xs sm:text-sm text-ink/40">Current Time</div>
-            </div>
-          </div>
 
-          {/* Chair toggle — simple two-button segmented control. Owner flips
-              this each morning depending on whether both barbers are in. */}
-          <div className="mt-5 pt-5 border-t border-dashed border-ink/10 flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-2 text-ink/60 text-sm font-semibold">
-              Chairs running today
-            </div>
-            <div className="inline-flex bg-ink/5 rounded-xl p-1">
-              {[1, 2].map(n => (
-                <button
-                  key={n}
-                  onClick={() => handleToggleChairs(n)}
-                  disabled={chairToggleLoading}
-                  className={`px-5 py-2 rounded-lg font-bold text-sm transition-all disabled:opacity-50 ${
-                    totalChairs === n
-                      ? 'bg-rose text-white shadow-sm'
-                      : 'text-ink/50 hover:text-ink/70'
-                  }`}
-                >
-                  {n} {n === 1 ? 'Chair' : 'Chairs'}
-                </button>
-              ))}
+            {/* Right: Clock & Chair Switcher */}
+            <div className="flex items-center justify-between min-[600px]:justify-end gap-2 sm:gap-2.5 border-t min-[600px]:border-t-0 pt-2 min-[600px]:pt-0 border-slate-100 shrink-0">
+              
+              {/* Digital Clock */}
+              <div className="flex items-center gap-1.5 bg-slate-100/90 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200/60 shrink-0 whitespace-nowrap">
+                <Clock size={14} className="text-slate-500 shrink-0" />
+                <span className="font-mono text-xs sm:text-sm font-bold text-slate-800 whitespace-nowrap">
+                  {formatTime(currentTime)}
+                </span>
+              </div>
+
+              {/* Chairs running toggle */}
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/70 shrink-0">
+                {[1, 2].map((count) => (
+                  <button
+                    key={count}
+                    onClick={() => handleToggleChairs(count)}
+                    disabled={chairToggleLoading}
+                    className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      totalChairs === count
+                        ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    <Armchair size={12} className="shrink-0" />
+                    <span>{count} {count === 1 ? 'Chair' : 'Chairs'}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Chair cards — 1 column for a single chair, 2 side-by-side for two */}
-        <div className={`grid gap-4 mb-4 ${twoChairMode ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
-          {chairSlots.map(slot => (
-            <ChairCard
-              key={slot.chairNumber}
-              chairNumber={slot.chairNumber}
-              entry={slot.entry}
-              onComplete={handleCompleteService}
-              twoChairMode={twoChairMode}
-            />
-          ))}
+        {/* ── Active Chairs Section ── */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <Armchair size={13} />
+              <span>Active Chairs ({inProgressEntries.length}/{totalChairs} Occupied)</span>
+            </h2>
+            {freeChairsCount > 0 && (
+              <span className="text-[11px] sm:text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                {freeChairsCount} {freeChairsCount === 1 ? 'chair ready' : 'chairs ready'}
+              </span>
+            )}
+          </div>
+
+          <div
+            className={`grid gap-2.5 sm:gap-3.5 ${
+              twoChairMode ? 'grid-cols-1 min-[560px]:grid-cols-2 sm:grid-cols-2' : 'grid-cols-1'
+            }`}
+          >
+            {chairSlots.map((slot) => (
+              <ChairCard
+                key={slot.chairNumber}
+                chairNumber={slot.chairNumber}
+                entry={slot.entry}
+                onComplete={handleCompleteService}
+                twoChairMode={twoChairMode}
+                nextWaitingCustomer={freeChairsCount > 0 && queue.length > 0 ? queue[0] : null}
+                onStartNext={handleStartService}
+              />
+            ))}
+          </div>
         </div>
 
-        {/* Queue */}
-        <div className="bg-paper-card rounded-2xl shadow-sm border border-ink/8 p-5 sm:p-6 mb-4">
-          <div className="flex justify-between items-center mb-5 sm:mb-6 gap-3">
-            <h2 className="text-xl sm:text-2xl font-display font-semibold text-ink">Queue ({queue.length})</h2>
+        {/* ── Waiting Queue Section ── */}
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-3 sm:p-4 md:p-5">
+          <div className="flex items-center justify-between mb-3 sm:mb-4 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                Waiting Queue
+              </h2>
+              <span className="bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded-full text-xs border border-slate-200">
+                {queue.length}
+              </span>
+            </div>
+
             <button
               onClick={() => setShowAddWalkin(true)}
-              className="bg-sage hover:bg-sage/90 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold flex items-center gap-2 transition-all transform active:scale-95 shadow-md text-sm sm:text-base flex-shrink-0"
+              className="bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
             >
-              <Plus size={18} />
+              <Plus size={15} />
               <span>Add Walk-in</span>
             </button>
           </div>
 
           {queue.length === 0 ? (
-            <div className="text-center py-14 sm:py-16 text-ink/30">
-              <AlertCircle size={48} className="mx-auto mb-4 opacity-50" />
-              <p className="text-lg sm:text-xl font-display font-semibold text-ink/50">No customers in queue</p>
-              <p className="text-sm mt-2 text-ink/35">Walk-ins will appear here when you add them</p>
+            <div className="text-center py-12 px-4 border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                <CheckCircle2 size={24} />
+              </div>
+              <p className="text-base font-semibold text-slate-700">Queue is Clear</p>
+              <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                No customers are currently waiting. Walk-ins added at the counter or online bookings will appear here instantly.
+              </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {queue.map((customer, index) => (
-                <div
-                  key={customer.id}
-                  className="border-2 border-ink/8 rounded-xl p-4 sm:p-5 hover:border-rose/30 hover:shadow-sm transition-all"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                      <div className="bg-ink text-paper w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-mono font-bold text-lg sm:text-xl shadow-md flex-shrink-0">
-                        {index + 1}
+            <div className="space-y-2.5">
+              {queue.map((customer, index) => {
+                const canStart = index < freeChairsCount;
+                return (
+                  <div
+                    key={customer.id}
+                    className={`group rounded-xl border p-2.5 sm:p-3.5 transition-all duration-150 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 ${
+                      canStart
+                        ? 'border-emerald-200 bg-emerald-50/20 hover:border-emerald-300 hover:shadow-xs'
+                        : 'border-slate-200/90 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    {/* Left: Position Badge & Customer Meta */}
+                    <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                      <div
+                        className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-xs sm:text-sm shrink-0 font-mono ${
+                          canStart
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-slate-100 text-slate-700 border border-slate-200'
+                        }`}
+                      >
+                        #{index + 1}
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                          <span className="font-display font-semibold text-ink text-base sm:text-lg truncate">{customer.customerName}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap mb-0.5 sm:mb-1">
+                          <span className="font-bold text-slate-900 text-sm sm:text-base leading-snug truncate">
+                            {customer.customerName}
+                          </span>
                           {customer.type === 'ONLINE_BOOKING' ? (
-                            <span className="bg-sage-light text-sage px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold flex-shrink-0">
-                              PAID ONLINE
+                            <span className="bg-blue-50 text-blue-700 border border-blue-200/80 px-2 py-0.5 rounded-full text-[11px] font-semibold flex items-center gap-1">
+                              <CheckCircle2 size={10} className="text-blue-600" />
+                              Paid Online
                             </span>
                           ) : (
-                            <span className="bg-ink/8 text-ink/50 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold flex-shrink-0">
-                              WALK-IN
+                            <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-full text-[11px] font-medium">
+                              Walk-in
                             </span>
                           )}
                         </div>
 
-                        <div className="flex gap-2 sm:gap-4 text-xs sm:text-sm flex-wrap items-center">
-                          <span className="font-medium text-ink/70">{customer.serviceName}</span>
-                          <span className="text-ink/25">•</span>
-                          <span className="text-ink/50 font-mono">{customer.estimatedDurationMinutes} min</span>
-                          <span className="text-ink/25">•</span>
-                          <span className="text-rose font-bold flex items-center gap-1 font-mono">
-                            <Clock size={13} />
-                            {calculateEstimatedTime(customer)}
+                        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] sm:text-xs text-slate-500">
+                          <span className="font-medium text-slate-700">{customer.serviceName}</span>
+                          <span className="text-slate-300">•</span>
+                          <span className="font-mono text-slate-600">{customer.estimatedDurationMinutes} min</span>
+                          <span className="text-slate-300">•</span>
+                          <span className="inline-flex items-center gap-1 text-slate-600 font-medium">
+                            <Clock size={11} className="text-slate-400" />
+                            {calculateEstimatedTime(customer)} (~{getTimeUntilTurn(customer)}m away)
                           </span>
-                        </div>
 
-                        {/* Phone — only present for online bookings (walk-ins
-                            have no linked user account, so no number to show).
-                            Plain text, not a tel: link — the barber's device
-                            is a tablet, not a phone, so a dialer link would do
-                            nothing useful here. They can call from their own
-                            phone if needed. */}
-                        {customer.customerPhone && (
-                          <span className="mt-1.5 inline-flex items-center gap-1.5 text-xs sm:text-sm text-sage font-semibold font-mono">
-                            <Phone size={13} />
-                            {customer.customerPhone}
-                          </span>
-                        )}
-
-                        <div className="mt-1.5 text-xs text-ink/40">
-                          Estimated in{' '}
-                          <span className="font-bold text-rose font-mono">
-                            {getTimeUntilTurn(customer)} minutes
-                          </span>
+                          {customer.customerPhone && (
+                            <>
+                              <span className="text-slate-300">•</span>
+                              <span className="inline-flex items-center gap-1 text-blue-600 font-mono font-medium">
+                                <Phone size={10} />
+                                {customer.customerPhone}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-                      {/* A free chair exists for this customer's turn — with 2
-                          chairs both the 1st and 2nd waiting customer can be
-                          started at once if both chairs are empty. */}
-                      {index < freeChairsCount && (
+                    {/* Right: Actions */}
+                    <div className="flex items-center justify-end gap-2 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0">
+                      {canStart && (
                         <button
                           onClick={() => handleStartService(customer)}
-                          className="bg-rose hover:bg-rose-dark text-white px-3.5 sm:px-8 py-2.5 sm:py-3 rounded-xl font-bold flex items-center gap-1.5 sm:gap-2 transition-all transform active:scale-95 shadow-md text-sm sm:text-base"
+                          className="bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
                         >
-                          <Play size={16} />
-                          <span className="hidden sm:inline">Start Service</span>
+                          <Play size={13} className="fill-current text-white" />
+                          <span>Start Service</span>
                         </button>
                       )}
 
-                      {customer.type !== 'ONLINE_BOOKING' && (
+                      {customer.type !== 'ONLINE_BOOKING' ? (
                         <button
                           onClick={() => handleRemoveFromQueue(customer.id)}
-                          className="text-ink/35 hover:text-rose hover:bg-rose-light p-2.5 sm:p-3 rounded-xl transition-all"
-                          title="Remove walk-in from queue"
+                          className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-colors cursor-pointer"
+                          title="Remove walk-in"
                         >
-                          <Trash2 size={18} />
+                          <Trash2 size={15} />
                         </button>
-                      )}
-
-                      {customer.type === 'ONLINE_BOOKING' && (
+                      ) : (
                         <button
                           onClick={() => openCancelModal(customer)}
-                          className="text-brass/70 hover:text-brass hover:bg-brass-light p-2.5 sm:p-3 rounded-xl transition-all"
+                          className="text-slate-400 hover:text-amber-600 hover:bg-amber-50 p-1.5 rounded-lg transition-colors cursor-pointer"
                           title="Cancel online booking"
                         >
-                          <XCircle size={18} />
+                          <XCircle size={15} />
                         </button>
                       )}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 sm:gap-4">
-          <div className="bg-paper-card rounded-xl shadow-sm border border-ink/8 p-4 sm:p-5">
-            <div className="text-ink/45 text-xs sm:text-sm mb-1 font-medium">Total Queue</div>
-            <div className="text-2xl sm:text-4xl font-display font-semibold text-ink">{queue.length}</div>
+        {/* ── Summary Stats Strip ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          <div className="bg-white rounded-xl border border-slate-200/90 p-3 sm:p-3.5 shadow-xs">
+            <div className="flex items-center justify-between text-slate-500 mb-0.5 sm:mb-1">
+              <span className="text-[11px] sm:text-xs font-medium">Total Waiting</span>
+              <Users size={14} className="text-slate-400" />
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-slate-900">{queue.length}</div>
           </div>
-          <div className="bg-paper-card rounded-xl shadow-sm border border-ink/8 p-4 sm:p-5">
-            <div className="text-ink/45 text-xs sm:text-sm mb-1 font-medium">Online</div>
-            <div className="text-2xl sm:text-4xl font-display font-semibold text-sage">
-              {queue.filter(c => c.type === 'ONLINE_BOOKING').length}
+
+          <div className="bg-white rounded-xl border border-slate-200/90 p-3 sm:p-3.5 shadow-xs">
+            <div className="flex items-center justify-between text-slate-500 mb-0.5 sm:mb-1">
+              <span className="text-[11px] sm:text-xs font-medium">Online Paid</span>
+              <CreditCard size={14} className="text-blue-500" />
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-blue-600">
+              {queue.filter((c) => c.type === 'ONLINE_BOOKING').length}
             </div>
           </div>
-          <div className="bg-paper-card rounded-xl shadow-sm border border-ink/8 p-4 sm:p-5">
-            <div className="text-ink/45 text-xs sm:text-sm mb-1 font-medium">Walk-ins</div>
-            <div className="text-2xl sm:text-4xl font-display font-semibold text-brass">
-              {queue.filter(c => c.type === 'WALK_IN').length}
+
+          <div className="bg-white rounded-xl border border-slate-200/90 p-3 sm:p-3.5 shadow-xs">
+            <div className="flex items-center justify-between text-slate-500 mb-0.5 sm:mb-1">
+              <span className="text-[11px] sm:text-xs font-medium">Walk-ins</span>
+              <UserCheck size={14} className="text-emerald-500" />
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-emerald-600">
+              {queue.filter((c) => c.type === 'WALK_IN').length}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200/90 p-3 sm:p-3.5 shadow-xs">
+            <div className="flex items-center justify-between text-slate-500 mb-0.5 sm:mb-1">
+              <span className="text-[11px] sm:text-xs font-medium">Chairs Active</span>
+              <Armchair size={14} className="text-slate-400" />
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-slate-800">
+              {inProgressEntries.length}/{totalChairs}
             </div>
           </div>
         </div>
+
       </div>
 
-      {/* ── Cancel Online Booking Modal ────────────────────────────────────── */}
-      {cancelModal.open && (
-        <div className="fixed inset-0 bg-ink/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-paper-card rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-brass-light p-2 rounded-full">
-                <XCircle size={24} className="text-brass" />
-              </div>
-              <h3 className="text-xl sm:text-2xl font-display font-semibold text-ink">Cancel Booking</h3>
-            </div>
-
-            <div className="bg-paper rounded-xl p-4 mb-6 mt-4">
-              <p className="text-sm text-ink/45 mb-1">Cancelling booking for</p>
-              <p className="font-display font-semibold text-ink text-lg">
-                {cancelModal.queueEntry?.customerName}
-              </p>
-              <p className="text-sm text-ink/55">
-                {cancelModal.queueEntry?.serviceName} •{' '}
-                {cancelModal.queueEntry?.estimatedDurationMinutes} min
-              </p>
-            </div>
-
-            <div className="bg-brass-light border border-brass/20 rounded-xl p-3 mb-5 flex gap-2">
-              <AlertCircle size={16} className="text-brass flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-brass">
-                The customer will see this cancellation and the reason in their bookings.
-                Please select an honest reason.
-              </p>
-            </div>
-
-            <p className="text-sm font-bold text-ink/70 mb-3">Select a reason</p>
-            <div className="space-y-2 mb-6">
-              {CANCEL_REASONS.map((r) => (
-                <button
-                  key={r.key}
-                  type="button"
-                  onClick={() => setCancelModal(prev => ({ ...prev, reason: r.key }))}
-                  className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
-                    cancelModal.reason === r.key
-                      ? 'border-brass bg-brass-light'
-                      : 'border-ink/10 hover:border-ink/20'
-                  }`}
-                >
-                  <div className="font-semibold text-ink text-sm">{r.label}</div>
-                  <div className="text-xs text-ink/45 mt-0.5">{r.description}</div>
-                </button>
-              ))}
-            </div>
-
-            <div className="flex gap-3">
+      {/* ── Modal: Add Walk-in ── */}
+      {showAddWalkin && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-5 sm:p-6 max-w-md w-full shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-900">Add Walk-in Customer</h3>
               <button
-                onClick={closeCancelModal}
-                disabled={cancelModal.loading}
-                className="flex-1 px-4 py-3 border-2 border-ink/10 rounded-xl hover:bg-ink/5 transition-all font-bold text-ink/60 disabled:opacity-50"
+                onClick={() => setShowAddWalkin(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
               >
-                Go Back
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            {/* Customer Name */}
+            <div className="mb-4">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-0.5 sm:mb-1.5">
+                Customer Name
+              </label>
+              <input
+                type="text"
+                value={walkinData.customerName}
+                onChange={(e) => setWalkinData({ ...walkinData, customerName: e.target.value })}
+                placeholder="e.g. Rahul Sharma"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-slate-900 focus:outline-none transition-colors text-sm text-slate-800"
+                autoFocus
+              />
+            </div>
+
+            {/* Service Selection */}
+            <div className="mb-5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                Select Service
+              </label>
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {services.map((service) => {
+                  const isSelected = walkinData.serviceId === service.id;
+                  return (
+                    <button
+                      key={service.id}
+                      type="button"
+                      onClick={() => setWalkinData({ ...walkinData, serviceId: service.id })}
+                      className={`w-full p-3 rounded-xl border text-left transition-all flex items-center justify-between ${
+                        isSelected
+                          ? 'border-slate-900 bg-slate-900 text-white shadow-xs'
+                          : 'border-slate-200 hover:border-slate-300 bg-white text-slate-800'
+                      }`}
+                    >
+                      <div>
+                        <div className="font-semibold text-sm leading-tight">{service.name}</div>
+                        <div
+                          className={`text-xs mt-0.5 font-mono ${
+                            isSelected ? 'text-slate-300' : 'text-slate-400'
+                          }`}
+                        >
+                          {service.durationMinutes || service.duration} mins
+                        </div>
+                      </div>
+                      <div className="font-bold text-sm">₹{service.price}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="flex gap-2.5 pt-2">
+              <button
+                onClick={() => {
+                  setShowAddWalkin(false);
+                  setWalkinData({ customerName: '', serviceId: null });
+                }}
+                className="flex-1 py-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 font-semibold text-xs text-slate-600 transition-colors"
+              >
+                Cancel
               </button>
               <button
-                onClick={handleCancelOnlineBooking}
-                disabled={!cancelModal.reason || cancelModal.loading}
-                className="flex-1 px-4 py-3 bg-brass hover:bg-brass/90 text-white rounded-xl transition-all font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                onClick={handleAddWalkin}
+                disabled={!walkinData.customerName.trim() || !walkinData.serviceId}
+                className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold text-xs shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {cancelModal.loading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                    Cancelling…
-                  </>
-                ) : (
-                  'Confirm Cancel'
-                )}
+                Add to Queue
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Add Walk-in Modal */}
-      {showAddWalkin && (
-        <div className="fixed inset-0 bg-ink/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-paper-card rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl sm:text-2xl font-display font-semibold mb-6 text-ink">Add Walk-in Customer</h3>
-
-            <div className="mb-5">
-              <label className="block text-xs font-bold text-ink/50 uppercase tracking-wide mb-2">Customer Name</label>
-              <input
-                type="text"
-                value={walkinData.customerName}
-                onChange={(e) => setWalkinData({ ...walkinData, customerName: e.target.value })}
-                placeholder="Enter customer name"
-                className="w-full px-4 py-3.5 bg-paper border-2 border-transparent rounded-xl focus:border-rose focus:outline-none transition-colors text-sm text-ink placeholder:text-ink/35"
-                autoFocus
-              />
+      {/* ── Modal: Cancel Online Booking ── */}
+      {cancelModal.open && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-5 sm:p-6 max-w-md w-full shadow-xl border border-slate-200">
+            <div className="flex items-center gap-2.5 mb-3 text-amber-600">
+              <AlertCircle size={22} />
+              <h3 className="text-lg font-bold text-slate-900">Cancel Online Booking</h3>
             </div>
 
-            <div className="mb-6">
-              <label className="block text-xs font-bold text-ink/50 uppercase tracking-wide mb-3">Select Service</label>
-              <div className="space-y-3">
-                {services.map(service => (
-                  <button
-                    key={service.id}
-                    type="button"
-                    onClick={() => setWalkinData({ ...walkinData, serviceId: service.id })}
-                    className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
-                      walkinData.serviceId === service.id
-                        ? 'border-rose bg-rose-light shadow-sm'
-                        : 'border-ink/10 hover:border-ink/20'
-                    }`}
-                  >
-                    <div className="font-display font-semibold text-base text-ink">{service.name}</div>
-                    <div className="text-sm text-ink/50 font-mono">₹{service.price} • {service.durationMinutes || service.duration} minutes</div>
-                  </button>
-                ))}
-              </div>
+            <div className="bg-slate-50 rounded-xl p-3 mb-4 border border-slate-200/80 text-xs">
+              <p className="text-slate-500 mb-0.5">Booking for:</p>
+              <p className="font-bold text-slate-800 text-sm">
+                {cancelModal.queueEntry?.customerName}
+              </p>
+              <p className="text-slate-500 mt-0.5">
+                {cancelModal.queueEntry?.serviceName} ({cancelModal.queueEntry?.estimatedDurationMinutes} mins)
+              </p>
             </div>
 
-            <div className="flex gap-3">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+              Select reason for cancellation:
+            </p>
+            <div className="space-y-1.5 mb-5">
+              {CANCEL_REASONS.map((r) => (
+                <button
+                  key={r.key}
+                  type="button"
+                  onClick={() => setCancelModal((prev) => ({ ...prev, reason: r.key }))}
+                  className={`w-full p-2.5 rounded-xl border text-left transition-all ${
+                    cancelModal.reason === r.key
+                      ? 'border-amber-500 bg-amber-50 text-amber-900 font-semibold'
+                      : 'border-slate-200 hover:border-slate-300 text-slate-700'
+                  }`}
+                >
+                  <div className="text-xs font-bold">{r.label}</div>
+                  <div className="text-[11px] text-slate-500">{r.description}</div>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-2.5">
               <button
-                onClick={() => {
-                  setShowAddWalkin(false);
-                  setWalkinData({ customerName: '', serviceId: null });
-                }}
-                className="flex-1 px-4 py-3 border-2 border-ink/10 rounded-xl hover:bg-ink/5 transition-all font-bold text-ink/60"
+                onClick={closeCancelModal}
+                disabled={cancelModal.loading}
+                className="flex-1 py-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 font-semibold text-xs text-slate-600 transition-colors"
               >
-                Cancel
+                Keep Booking
               </button>
               <button
-                onClick={handleAddWalkin}
-                disabled={!walkinData.customerName || !walkinData.serviceId}
-                className="flex-1 px-4 py-3 bg-sage hover:bg-sage/90 text-white rounded-xl transition-all font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleCancelOnlineBooking}
+                disabled={!cancelModal.reason || cancelModal.loading}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold text-xs shadow-sm transition-all disabled:opacity-40"
               >
-                Add to Queue
+                {cancelModal.loading ? 'Cancelling...' : 'Confirm Cancel'}
               </button>
             </div>
           </div>

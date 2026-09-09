@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { salonAPI, serviceAPI, queueAPI, paymentAPI, reviewAPI } from '../services/api';
+import { salonAPI, serviceAPI, queueAPI, paymentAPI, reviewAPI, WS_URL } from '../services/api';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import {
@@ -65,7 +65,7 @@ export default function SalonDetails() {
     loadQueue();
     loadReviews();
 
-    const socket = new SockJS(import.meta.env.VITE_WS_URL || 'http://localhost:8080/ws');
+    const socket = new SockJS(WS_URL);
     const stompClient = new Client({
       webSocketFactory: () => socket,
       onConnect: () => {
