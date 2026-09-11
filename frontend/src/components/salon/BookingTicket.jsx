@@ -7,18 +7,17 @@ import {
   Loader,
   X,
   Sparkles,
-  CheckCircle2
 } from 'lucide-react';
 
 export default function BookingTicket({
-  selectedServices,
-  totalPrice,
-  totalDuration,
-  estimatedArrivalMs,
-  totalChairs,
-  waitMinutes,
-  payState,
-  payError,
+  selectedServices = [],
+  totalPrice = 0,
+  totalDuration = 0,
+  estimatedArrivalMs = Date.now(),
+  totalChairs = 1,
+  waitMinutes = 0,
+  payState = 'IDLE',
+  payError = '',
   onRemoveService,
   onPayNow,
 }) {
@@ -30,6 +29,10 @@ export default function BookingTicket({
     });
 
   const isPaymentInProgress = ['CREATING', 'PROCESSING', 'VERIFYING'].includes(payState);
+
+  // Filter out any "cancelled" message per user request: "remove the text of your payment was cancelled in ticket component"
+  const cleanError =
+    payError && !payError.toLowerCase().includes('cancel') ? payError : '';
 
   if (selectedServices.length === 0) {
     return (
@@ -46,7 +49,7 @@ export default function BookingTicket({
   }
 
   return (
-    <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+    <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden font-sans">
       {/* Top Header */}
       <div className="p-4 sm:p-5 bg-slate-900 text-white flex items-center justify-between">
         <div>
@@ -111,9 +114,9 @@ export default function BookingTicket({
         </div>
       </div>
 
-      {/* Perforated tear line with ticket notch */}
+      {/* Perforated tear line */}
       <div className="relative flex items-center px-4 my-1">
-        <div className="flex-1 border-t-2 border-dashed border-slate-200 ticket-notch" />
+        <div className="flex-1 border-t-2 border-dashed border-slate-200" />
       </div>
 
       {/* Turn Time & Multi-Chair explanation */}
@@ -140,43 +143,43 @@ export default function BookingTicket({
           </div>
         </div>
 
-        {/* Error message if payment fails */}
-        {payError && (
+        {/* Error message if genuine failure occurs (cancelled message excluded) */}
+        {cleanError && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex gap-2 text-xs text-red-800">
             <AlertCircle size={16} className="text-red-600 shrink-0 mt-0.5" />
-            <p>{payError}</p>
+            <p>{cleanError}</p>
           </div>
         )}
 
-        {/* Pay Button */}
+        {/* Pay Button with prominent loading indicator to avoid confusion */}
         <button
           type="button"
           onClick={onPayNow}
           disabled={isPaymentInProgress}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white py-3.5 sm:py-4 rounded-xl font-bold text-sm sm:text-base transition-all shadow-md shadow-emerald-600/20 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white py-3.5 sm:py-4 rounded-xl font-bold text-sm sm:text-base transition-all shadow-md shadow-emerald-600/20 disabled:opacity-75 disabled:cursor-wait flex items-center justify-center gap-2 cursor-pointer select-none"
         >
           {payState === 'CREATING' && (
             <>
-              <Loader size={18} className="animate-spin" />
-              Preparing secure order…
+              <Loader size={18} className="animate-spin text-white" />
+              <span>Preparing secure order…</span>
             </>
           )}
           {payState === 'PROCESSING' && (
             <>
-              <Loader size={18} className="animate-spin" />
-              Completing Razorpay checkout…
+              <Loader size={18} className="animate-spin text-white" />
+              <span>Opening Razorpay checkout…</span>
             </>
           )}
           {payState === 'VERIFYING' && (
             <>
-              <Loader size={18} className="animate-spin" />
-              Verifying payment & issuing token…
+              <Loader size={18} className="animate-spin text-white" />
+              <span>Verifying payment & issuing token…</span>
             </>
           )}
-          {(payState === 'IDLE' || payState === 'FAILED') && (
+          {!isPaymentInProgress && (
             <>
               <CreditCard size={18} />
-              Pay ₹{totalPrice} & Join Live Queue
+              <span>Pay ₹{totalPrice} & Join Live Queue</span>
             </>
           )}
         </button>

@@ -3,8 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { salonAPI, serviceAPI, queueAPI, paymentAPI, reviewAPI, WS_URL } from '../services/api';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
-import { ArrowLeft, AlertCircle, Loader } from 'lucide-react';
-
+import { ArrowLeft, AlertCircle } from 'lucide-react';
 import SalonHeader from '../components/salon/SalonHeader';
 import TabBar from '../components/salon/TabBar';
 import ServicesTab from '../components/salon/ServicesTab';
@@ -25,18 +24,15 @@ const PAY_STATE = {
 export default function SalonDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-
   const [salon, setSalon] = useState(null);
   const [services, setServices] = useState([]);
   const [queue, setQueue] = useState([]);
   const [selectedServices, setSelectedServices] = useState([]);
   const [activeTab, setActiveTab] = useState('services');
-
   const [loading, setLoading] = useState(true);
   const [servicesLoading, setServicesLoading] = useState(true);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [reviews, setReviews] = useState([]);
-
   const [currentTime, setCurrentTime] = useState(new Date());
   const [payState, setPayState] = useState(PAY_STATE.IDLE);
   const [payError, setPayError] = useState('');
@@ -151,6 +147,7 @@ export default function SalonDetails() {
         chairFreeInMinutes[idx] += entry.estimatedDurationMinutes || 0;
       }
     }
+
     return Math.min(...chairFreeInMinutes);
   }, [queue, currentTime, salon]);
 
@@ -245,8 +242,9 @@ export default function SalonDetails() {
       theme: { color: '#059669' }, // Emerald green brand color
       modal: {
         ondismiss: () => {
-          setPayState(PAY_STATE.FAILED);
-          setPayError('Payment was cancelled. Your booking has not been confirmed.');
+          // Per user request: remove "your payment was cancelled" notification
+          setPayState(PAY_STATE.IDLE);
+          setPayError('');
         },
       },
       handler: async (response) => {
@@ -311,7 +309,7 @@ export default function SalonDetails() {
           </p>
           <button
             onClick={() => navigate('/home')}
-            className="mt-4 bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold"
+            className="mt-4 bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold cursor-pointer"
           >
             Back to Home
           </button>
@@ -323,17 +321,17 @@ export default function SalonDetails() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-16 font-sans">
       <div className="max-w-6xl mx-auto px-3 sm:px-6 pt-4 sm:pt-6">
-        {/* Top Back Navigation */}
+        {/* Top Back Navigation with increased text size */}
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-slate-500 hover:text-slate-900 font-semibold mb-3 sm:mb-4 transition text-xs sm:text-sm cursor-pointer"
+          className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-bold mb-3 sm:mb-4 transition text-sm sm:text-base cursor-pointer"
         >
-          <ArrowLeft size={16} />
+          <ArrowLeft size={18} />
           <span>Back to Salons</span>
         </button>
 
-        {/* Salon Header with verified badge and 4-stat strip */}
+        {/* Salon Header with verified badge and stat strip */}
         <SalonHeader
           salon={salon}
           waitMinutes={waitMinutes}
@@ -341,7 +339,7 @@ export default function SalonDetails() {
           onSelectTab={setActiveTab}
         />
 
-        {/* WhatsApp-style 4-column balanced tabs */}
+        {/* 4-column balanced tabs */}
         <TabBar
           activeTab={activeTab}
           onTabChange={setActiveTab}
@@ -350,7 +348,7 @@ export default function SalonDetails() {
           selectedServicesCount={selectedServices.length}
         />
 
-        {/* Tab 1: Services (strictly no total service counts like 10, 9 in tab or header) */}
+        {/* Tab 1: Services */}
         {activeTab === 'services' && (
           <ServicesTab
             services={services}
@@ -369,7 +367,7 @@ export default function SalonDetails() {
           />
         )}
 
-        {/* Tab 2: Waiting Line (Queue) */}
+        {/* Tab 2: In Line (Waiting Line) */}
         {activeTab === 'queue' && (
           <WaitingLineTab
             queue={queue}

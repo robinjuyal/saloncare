@@ -1,135 +1,127 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Scissors } from 'lucide-react';
+import { ArrowLeft, Scissors, Mail, ShieldCheck, Clock, HelpCircle } from 'lucide-react';
+import ContactModal from '../components/ContactModal';
 
-// Public page — reachable whether logged in or not (linked from Signup,
-// and from MyBookings for people who are already logged in). Kept as a
-// standalone route rather than nested under /home or /dashboard so it
-// works the same for a customer, a salon owner, or someone who hasn't
-// made an account yet.
 export default function Terms() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [contactOpen, setContactOpen] = useState(false);
 
   return (
-    <div className="bg-paper min-h-screen font-body">
+    <div className="bg-slate-50 min-h-screen font-sans text-slate-900 pb-16">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-
-        {/* Back — goes to the logged-in home if there is one, otherwise
-            just backs up in history (e.g. back to Signup). */}
+        {/* Back navigation */}
         <button
-          onClick={() => user ? navigate('/') : navigate(-1)}
-          className="flex items-center gap-1.5 text-ink/50 hover:text-ink text-sm font-medium mb-6 transition-colors"
+          type="button"
+          onClick={() => (user ? navigate('/') : navigate(-1))}
+          className="flex items-center gap-1.5 text-slate-500 hover:text-slate-900 text-sm sm:text-base font-semibold mb-6 transition-colors cursor-pointer"
         >
-          <ArrowLeft size={16} /> Back
+          <ArrowLeft size={18} />
+          <span>Back</span>
         </button>
 
-        <div className="bg-paper-card border border-ink/10 rounded-2xl sm:rounded-3xl p-6 sm:p-10">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 bg-rose rounded-xl flex items-center justify-center flex-shrink-0 rotate-3 shadow-sm shadow-rose/30">
+        <div className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-6 sm:p-10 shadow-xs">
+          {/* Header */}
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0 rotate-3 shadow-md shadow-emerald-600/20">
               <Scissors className="text-white -rotate-3" size={18} />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-display font-semibold text-ink">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Terms & Conditions
             </h1>
           </div>
-          <p className="text-ink/40 text-xs mb-8 ml-[52px]">Last updated: September 2026</p>
+          <p className="text-slate-400 text-xs sm:text-sm mb-8 ml-[52px]">
+            Last updated: September 2026
+          </p>
 
-          <div className="space-y-8 text-sm text-ink/75 leading-relaxed">
-
+          <div className="space-y-8 text-sm sm:text-base text-slate-600 leading-relaxed">
             <p>
-              These terms cover booking a place in a salon's queue through SalonQueue.
-              By creating an account or completing a booking, you agree to the rules below.
+              These terms govern queue reservations and service bookings through SalonQueue / SalonCare.
+              By creating an account or completing a booking, you agree to the policies outlined below.
             </p>
 
-            <section>
-              <h2 className="font-display font-semibold text-ink text-base mb-2.5">
-                1. Booking & Cancellation
+            {/* Section 1 */}
+            <section className="space-y-3">
+              <h2 className="font-bold text-slate-900 text-base sm:text-lg flex items-center gap-2">
+                <Clock size={18} className="text-emerald-600 shrink-0" />
+                1. Booking & Cancellation Policy
               </h2>
               <ul className="list-disc pl-5 space-y-2">
                 <li>
-                  A booking is confirmed — and your place in the salon's queue is reserved — only
-                  once payment is completed. An unpaid or abandoned checkout does not hold your spot.
+                  <strong className="text-slate-800">Confirmed Queue Placement:</strong> Your place in the salon's live queue is officially locked in only after payment verification. Unfinished or cancelled checkouts do not reserve a queue slot.
                 </li>
                 <li>
-                  <strong className="text-ink">No-shows:</strong> every booking has an estimated
-                  arrival time. If you don't check in at the salon within the no-show window after
-                  that time (typically 15 minutes, set by the salon), your booking is automatically
-                  marked as a <strong className="text-ink">No-Show</strong>, your place in the queue
-                  is released, and the payment is treated as forfeited under Section 2.
+                  <strong className="text-slate-800">No-Show Policy & 24-Hour Refund:</strong> Every booking displays a real-time estimated arrival window. If you do not arrive at the salon within a 15-minute grace period following your estimated arrival time, your booking is automatically marked as a <strong className="text-slate-900">No-Show</strong>, and your queue spot is released to seat waiting customers.
+                  <div className="mt-1 p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-amber-900 text-xs sm:text-sm">
+                    <strong>No-Show Refund Terms:</strong> To fairly compensate the barber for reserved chair time and schedule disruption, a <strong className="text-amber-950">10% cancellation fee</strong> is deducted, and the remaining <strong className="text-amber-950">90% of your booking payment is refunded to your original payment method within 24 hours</strong>.
+                  </div>
                 </li>
                 <li>
-                  Self-service cancellation isn't available yet — if your plans change, contact the
-                  salon directly or reach SalonQueue support (Section 4) as early as you can, ideally
-                  before your estimated turn.
-                </li>
-                <li>
-                  A salon can cancel a booking on its end (for example, if a barber becomes
-                  unavailable). You'll see this reflected in <em>My Bookings</em> along with the
-                  reason, and any payment already made is reviewed for a refund per Section 2.
+                  <strong className="text-slate-800">Salon-Initiated Cancellations:</strong> If a salon must cancel a session due to unexpected barber unavailability or shop emergencies, you will receive a <strong className="text-slate-900">100% full refund within 24 hours</strong>.
                 </li>
               </ul>
             </section>
 
-            <section>
-              <h2 className="font-display font-semibold text-ink text-base mb-2.5">
-                2. Payment Terms
+            {/* Section 2 */}
+            <section className="space-y-3">
+              <h2 className="font-bold text-slate-900 text-base sm:text-lg flex items-center gap-2">
+                <ShieldCheck size={18} className="text-emerald-600 shrink-0" />
+                2. Payment & 24-Hour Refund Terms
               </h2>
               <ul className="list-disc pl-5 space-y-2">
                 <li>
-                  Payments are processed securely through Razorpay (UPI, cards, net banking). SalonQueue
-                  does not see or store your card or bank details.
+                  <strong className="text-slate-800">Secure Processing:</strong> Payments are processed via encrypted channels by Razorpay (supporting UPI, Google Pay, PhonePe, Paytm, Debit/Credit Cards, and Net Banking). SalonCare never stores your raw card credentials.
                 </li>
                 <li>
-                  <strong className="text-ink">The amount charged is the full price</strong> of the
-                  service(s) you selected — not a deposit or partial advance. It covers reserving your
-                  queue position and the specific service(s) booked, at the price shown at checkout.
+                  <strong className="text-slate-800">Transparent Pricing:</strong> The amount charged at checkout covers 100% of the service(s) selected and locks your place in line. Additional services requested in person at the salon are billed separately by the salon.
                 </li>
                 <li>
-                  It does not cover any additional services, products, or add-ons requested in person
-                  at the salon beyond what was booked — those are settled directly with the salon.
-                </li>
-                <li>
-                  Refunds are not automatic and are reviewed case by case — for example, a salon-initiated
-                  cancellation or a payment/technical error. Eligible refunds are issued to your original
-                  payment method, typically within 5–7 business days, once approved.
-                </li>
-                <li>
-                  A No-Show under Section 1 forfeits the payment, since the queue position was held and
-                  then released without the service being provided.
+                  <strong className="text-slate-800">24-Hour Refund Processing:</strong> All approved refunds — whether from salon cancellations, duplicate payment adjustments, or eligible no-show resolutions (less the 10% barber compensation fee) — are processed promptly and credited back to your original source account <strong className="text-slate-900">within 24 hours</strong>.
                 </li>
               </ul>
             </section>
 
-            <section>
-              <h2 className="font-display font-semibold text-ink text-base mb-2.5">
-                3. Nature of the Service
+            {/* Section 3 */}
+            <section className="space-y-2">
+              <h2 className="font-bold text-slate-900 text-base sm:text-lg">
+                3. Salon Services & Standards
               </h2>
               <p>
-                SalonQueue books your place in line and estimates your wait — it doesn't perform or
-                supervise the salon service itself. Service quality, timing on the day, and anything
-                that happens at the salon are between you and the salon.
+                SalonCare operates the real-time queue synchronization and booking platform. Styling, grooming, hygiene standards, and physical in-salon experiences are conducted by the respective independent salon professionals.
               </p>
             </section>
 
-            <section>
-              <h2 className="font-display font-semibold text-ink text-base mb-2.5">
+            {/* Section 4 */}
+            <section className="space-y-3 pt-2">
+              <h2 className="font-bold text-slate-900 text-base sm:text-lg flex items-center gap-2">
+                <HelpCircle size={18} className="text-emerald-600 shrink-0" />
                 4. Questions or Disputes
               </h2>
               <p>
-                For anything about a specific booking or payment — a refund request, a no-show you
-                think was marked in error, or anything else — reach out and we'll help sort it out.
+                Have questions about your booking, payment verification, or refund status? Encountered an issue at the salon? Our dedicated support team is here to assist you immediately.
               </p>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setContactOpen(true)}
+                  className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm sm:text-base px-5 py-3 rounded-xl transition shadow-xs cursor-pointer"
+                >
+                  <Mail size={17} />
+                  <span>Contact Us</span>
+                </button>
+              </div>
             </section>
 
-            <p className="text-ink/40 text-xs pt-2 border-t border-ink/10">
-              These terms may be updated from time to time; continued use of SalonQueue after a
-              change means you accept the updated terms.
+            <p className="text-slate-400 text-xs sm:text-sm pt-4 border-t border-slate-100">
+              These terms may be updated periodically to reflect operational enhancements. Continued use of SalonCare signifies acceptance of the latest terms.
             </p>
           </div>
         </div>
       </div>
+
+      {contactOpen && <ContactModal onClose={() => setContactOpen(false)} />}
     </div>
   );
 }

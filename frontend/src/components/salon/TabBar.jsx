@@ -14,14 +14,13 @@ export default function TabBar({
       label: 'Services',
       shortLabel: 'Services',
       icon: Scissors,
-      // Strictly do NOT show any number in services (no 10, 9, etc.) - just 'Services'
       hasDot: selectedServicesCount > 0,
       badgeText: null,
     },
     {
       id: 'queue',
-      label: 'Waiting Line',
-      shortLabel: 'Queue',
+      label: 'In Line',
+      shortLabel: 'In Line',
       icon: Users,
       isLive: true,
       badgeText: queueCount > 0 ? `${queueCount}` : null,
@@ -43,7 +42,7 @@ export default function TabBar({
   ];
 
   return (
-    <div className="sticky top-0 z-30 bg-slate-50 border-b border-slate-200/80 hardware-accelerated pt-1 pb-2.5 mb-3 sm:mb-4">
+    <div className="sticky top-0 z-30 bg-slate-50 border-b border-slate-200/80 hardware-accelerated pt-1 pb-2.5 mb-3 sm:mb-4 font-sans">
       {/* 4-Column Mobile Grid: perfectly balanced, zero overflow */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-1 sm:p-1.5 shadow-xs grid grid-cols-4 gap-1">
         {tabs.map((tab) => {
@@ -55,7 +54,7 @@ export default function TabBar({
               key={tab.id}
               type="button"
               onClick={() => onTabChange(tab.id)}
-              className={`py-2 sm:py-2.5 px-1 sm:px-3 rounded-xl transition-colors duration-150 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 cursor-pointer select-none text-center ${
+              className={`py-2.5 sm:py-3 px-1 sm:px-3 rounded-xl transition-colors duration-150 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 cursor-pointer select-none text-center ${
                 isActive
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200'
@@ -63,7 +62,7 @@ export default function TabBar({
             >
               <div className="relative flex items-center justify-center">
                 <Icon
-                  size={16}
+                  size={17}
                   className={
                     isActive
                       ? 'text-emerald-400'
@@ -84,14 +83,13 @@ export default function TabBar({
               </div>
 
               <div className="flex items-center gap-1">
-                <span className="text-[11px] sm:text-xs md:text-sm font-semibold tracking-tight whitespace-nowrap">
-                  <span className="sm:hidden">{tab.shortLabel}</span>
-                  <span className="hidden sm:inline">{tab.label}</span>
+                <span className="text-xs sm:text-sm md:text-base font-bold tracking-tight whitespace-nowrap">
+                  <span>{tab.shortLabel}</span>
                 </span>
 
                 {tab.badgeText && !tab.isLive && (
                   <span
-                    className={`text-[9px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.2 rounded-full ${
+                    className={`text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded-full ${
                       isActive
                         ? 'bg-slate-800 text-slate-300'
                         : 'bg-slate-100 text-slate-500'
@@ -100,9 +98,10 @@ export default function TabBar({
                     {tab.badgeText}
                   </span>
                 )}
+
                 {tab.isLive && (
                   <span
-                    className={`text-[9px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.2 rounded-full ${
+                    className={`text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded-full ${
                       isActive
                         ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
                         : 'bg-emerald-50 text-emerald-700 border border-emerald-200'

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Scissors,
   User,
@@ -10,7 +10,7 @@ import {
   X,
   Clock,
   AlertCircle,
-  LayoutGrid
+  LayoutGrid,
 } from 'lucide-react';
 import BookingTicket from './BookingTicket';
 
@@ -33,20 +33,20 @@ export default function ServicesTab({
   selectedServices = [],
   onToggleService,
   onRemoveService,
-  totalPrice,
-  totalDuration,
-  estimatedArrivalMs,
-  totalChairs,
-  waitMinutes,
-  payState,
-  payError,
+  totalPrice = 0,
+  totalDuration = 0,
+  estimatedArrivalMs = Date.now(),
+  totalChairs = 1,
+  waitMinutes = 0,
+  payState = 'IDLE',
+  payError = '',
   onPayNow,
 }) {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileTicketOpen, setMobileTicketOpen] = useState(false);
 
-  // Available categories
+  // Available categories derived dynamically from services fetched from the backend
   const presentCategories = useMemo(() => {
     return Array.from(new Set(services.map((s) => s.category).filter(Boolean)));
   }, [services]);
@@ -64,6 +64,36 @@ export default function ServicesTab({
       return matchesCategory && matchesSearch;
     });
   }, [services, selectedCategory, searchQuery]);
+
+  // Handle hardware/browser back button: close mobile drawer instead of navigating away
+  useEffect(() => {
+    if (mobileTicketOpen) {
+      window.history.pushState({ modal: 'ticket' }, '');
+      const handlePopState = () => {
+        setMobileTicketOpen(false);
+      };
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    }
+  }, [mobileTicketOpen]);
+
+  // Close ticket safely, syncing with history state
+  const handleCloseTicket = () => {
+    if (window.history.state?.modal === 'ticket') {
+      window.history.back();
+    } else {
+      setMobileTicketOpen(false);
+    }
+  };
+
+  // Close modal when payment succeeds
+  useEffect(() => {
+    if (payState === 'SUCCESS') {
+      setMobileTicketOpen(false);
+    }
+  }, [payState]);
 
   return (
     <div className="pb-28 lg:pb-6">
@@ -90,14 +120,14 @@ export default function ServicesTab({
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
                   >
                     <X size={15} />
                   </button>
                 )}
               </div>
 
-              {/* Category horizontal pills */}
+              {/* Category horizontal pills (dynamically rendered from backend categories) */}
               {presentCategories.length > 0 && (
                 <div className="flex gap-2 overflow-x-auto pb-0.5 -mx-1 px-1 hide-scrollbar">
                   <button
@@ -197,7 +227,7 @@ export default function ServicesTab({
                                 e.stopPropagation();
                                 onToggleService(service);
                               }}
-                              className={`w-7 h-7 rounded-full flex items-center justify-center transition shrink-0 ${
+                              className={`w-7 h-7 rounded-full flex items-center justify-center transition shrink-0 cursor-pointer ${
                                 isSelected
                                   ? 'bg-emerald-600 text-white'
                                   : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
@@ -251,23 +281,25 @@ export default function ServicesTab({
         </div>
       </div>
 
-      {/* Mobile Sticky Bottom Summary Bar */}
+      {/* Mobile Sticky Bottom Summary Bar with increased text sizes */}
       {selectedServices.length > 0 && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200/90 hardware-accelerated px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-lg">
           <div className="max-w-md mx-auto flex items-center justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <div className="text-[11px] text-slate-500 font-medium truncate">
+              {/* Text above total price showing selected - increased size */}
+              <div className="text-xs sm:text-sm text-slate-600 font-semibold truncate">
                 {selectedServices.length} selected (~{totalDuration}m)
               </div>
-              <div className="text-base font-mono font-bold text-slate-900 leading-tight">
+              <div className="text-lg sm:text-xl font-mono font-extrabold text-slate-900 leading-tight">
                 ₹{totalPrice}
               </div>
-              <div className="text-[11px] sm:text-xs text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
-                <Clock size={11} className="text-emerald-600 shrink-0" />
+              {/* Arrival text on left - increased size */}
+              <div className="text-xs sm:text-sm text-emerald-700 font-bold flex items-center gap-1 mt-0.5">
+                <Clock size={13} className="text-emerald-600 shrink-0" />
                 <span>
-                  Arrival: ~{new Date(estimatedArrivalMs).toLocaleTimeString("en-IN", {
-                    hour: "2-digit",
-                    minute: "2-digit",
+                  Arrival: ~{new Date(estimatedArrivalMs).toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
                     hour12: true,
                   })}
                 </span>
@@ -302,8 +334,8 @@ export default function ServicesTab({
               <h3 className="font-bold text-base text-slate-900">Your Booking Ticket</h3>
               <button
                 type="button"
-                onClick={() => setMobileTicketOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center"
+                onClick={handleCloseTicket}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center cursor-pointer"
               >
                 <X size={16} />
               </button>
@@ -319,10 +351,7 @@ export default function ServicesTab({
               payState={payState}
               payError={payError}
               onRemoveService={onRemoveService}
-              onPayNow={() => {
-                setMobileTicketOpen(false);
-                onPayNow();
-              }}
+              onPayNow={onPayNow}
             />
           </div>
         </div>

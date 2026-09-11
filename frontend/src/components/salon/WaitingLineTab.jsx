@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  Users,
-  Clock,
-  CheckCircle2,
-  Sparkles,
-  Info
-} from 'lucide-react';
+import { Users, Info } from 'lucide-react';
 
 export default function WaitingLineTab({
   queue = [],
@@ -14,14 +8,14 @@ export default function WaitingLineTab({
   const waitingEntries = queue.filter((q) => q.status === 'WAITING');
 
   return (
-    <div className="space-y-4 sm:space-y-5">
+    <div className="space-y-4 sm:space-y-5 font-sans">
       {/* Top Banner: Status Overview */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 mb-0.5">
               <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                Live Waiting Line
+                Live In Line
               </h2>
               <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200/70 text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -50,15 +44,15 @@ export default function WaitingLineTab({
         </div>
       </div>
 
-      {/* Waiting List Section (Without chairs stations and without token text) */}
+      {/* Waiting List Section (Anonymized for Customer Privacy: User 1, User 2, etc.) */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm sm:text-base font-bold text-slate-900">
-              Customers in Waiting Line
+              Customers In Line
             </h3>
             <p className="text-xs text-slate-500">
-              Arrival order of verified bookings.
+              Arrival order of confirmed bookings. Names and services hidden for privacy.
             </p>
           </div>
           <span className="text-xs font-mono font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
@@ -79,31 +73,26 @@ export default function WaitingLineTab({
             {waitingEntries.map((entry, idx) => (
               <div
                 key={entry.id || idx}
-                className="py-3 flex items-center justify-between gap-3 text-xs sm:text-sm"
+                className="py-3.5 flex items-center justify-between gap-3 text-xs sm:text-sm"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-slate-100 text-slate-700 font-mono font-bold text-xs flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 font-mono font-bold text-xs flex items-center justify-center shrink-0">
                     #{idx + 1}
                   </div>
                   <div className="min-w-0">
-                    <div className="font-semibold text-slate-900 truncate flex items-center gap-1.5">
-                      <span>{entry.customerName || `Customer ${idx + 1}`}</span>
+                    <div className="font-semibold text-slate-900 truncate flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-800">User {idx + 1}</span>
                       {idx === 0 && (
-                        <span className="bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.2 rounded shrink-0">
+                        <span className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
                           Up Next
                         </span>
                       )}
-                    </div>
-                    <div className="text-[11px] text-slate-500 truncate flex items-center gap-1.5 mt-0.5">
-                      <span>{entry.serviceName}</span>
-                      <span>•</span>
-                      <span>~{entry.estimatedDurationMinutes || 25} mins</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="text-right shrink-0">
-                  <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] sm:text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
                     {entry.type === 'ONLINE_BOOKING' ? 'Online' : 'Walk-in'}
                   </span>
                 </div>
