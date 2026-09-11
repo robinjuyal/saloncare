@@ -151,7 +151,7 @@ export default function AboutTab({ salon }) {
         <div className="space-y-2.5 text-xs text-slate-600">
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/60">
             <span className="font-bold text-slate-900 block mb-0.5">Arrival Buffer</span>
-            Please arrive 5 to 10 minutes before your estimated time. Your chair will be held for a 10-minute grace window before proceeding to the next person.
+            Please arrive 5 to 10 minutes before your estimated time. Your chair will be held for a 15-minute grace window before proceeding to the next person.
           </div>
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/60">
             <span className="font-bold text-slate-900 block mb-0.5">Cancellation & Instant Refund</span>
