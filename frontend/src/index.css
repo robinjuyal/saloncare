@@ -21,6 +21,23 @@ body {
   color-scheme: light;
 }
 
+button, a, input, select, textarea {
+  touch-action: manipulation;
+}
+
+/* Mobile GPU optimization & layer promotion */
+.hardware-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Content visibility optimization for smooth long lists on phones */
+.content-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 110px;
+}
+
 /* ── Ticket-stub signature element ──────────────────────────────────────────
    Used on the customer-facing salon list/details pages for the queue
    position + booking confirmation — a digital version of the paper token
