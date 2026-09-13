@@ -10,8 +10,6 @@ import {
   X,
   Clock,
   AlertCircle,
-  Ticket,
-  ArrowRight,
 } from 'lucide-react';
 import BookingTicket from './BookingTicket';
 
@@ -130,7 +128,6 @@ export default function ServicesTab({
 }) {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [mobileTicketOpen, setMobileTicketOpen] = useState(false);
 
   // Available categories derived dynamically from services fetched from the backend
   const presentCategories = useMemo(() => {
@@ -139,49 +136,21 @@ export default function ServicesTab({
     return Array.from(set);
   }, [services]);
 
-  // Filtered services
+  // Filtered services sorted in ascending order by id
   const filteredServices = useMemo(() => {
-    return services.filter((service) => {
-      const matchesCategory =
-        selectedCategory === 'ALL' || service.category === selectedCategory;
-      const matchesSearch =
-        !searchQuery.trim() ||
-        service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (service.description &&
-          service.description.toLowerCase().includes(searchQuery.toLowerCase()));
-      return matchesCategory && matchesSearch;
-    });
+    return [...services]
+      .sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0))
+      .filter((service) => {
+        const matchesCategory =
+          selectedCategory === 'ALL' || service.category === selectedCategory;
+        const matchesSearch =
+          !searchQuery.trim() ||
+          service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (service.description &&
+            service.description.toLowerCase().includes(searchQuery.toLowerCase()));
+        return matchesCategory && matchesSearch;
+      });
   }, [services, selectedCategory, searchQuery]);
-
-  // Handle hardware/browser back button: close mobile drawer instead of navigating away
-  useEffect(() => {
-    if (mobileTicketOpen) {
-      window.history.pushState({ modal: 'ticket' }, '');
-      const handlePopState = () => {
-        setMobileTicketOpen(false);
-      };
-      window.addEventListener('popstate', handlePopState);
-      return () => {
-        window.removeEventListener('popstate', handlePopState);
-      };
-    }
-  }, [mobileTicketOpen]);
-
-  // Close ticket safely, syncing with history state
-  const handleCloseTicket = () => {
-    if (window.history.state?.modal === 'ticket') {
-      window.history.back();
-    } else {
-      setMobileTicketOpen(false);
-    }
-  };
-
-  // Close modal when payment succeeds
-  useEffect(() => {
-    if (payState === 'SUCCESS') {
-      setMobileTicketOpen(false);
-    }
-  }, [payState]);
 
   return (
     <div className="pb-28 lg:pb-6 font-sans">
@@ -362,86 +331,6 @@ export default function ServicesTab({
           </div>
         </div>
       </div>
-
-      {/* Mobile Sticky Bottom Summary Bar matching reference image */}
-      {selectedServices.length > 0 && (
-        <div className="lg:hidden fixed bottom-3 left-3 right-3 z-40 max-w-md mx-auto pointer-events-none">
-          <div className="bg-[#f0faf5] border border-emerald-100/90 rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 px-4 sm:px-4.5 shadow-lg shadow-emerald-950/5 flex items-center justify-between gap-3 pointer-events-auto">
-            {/* Left: Ticket icon + service details */}
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100/80 text-emerald-600 flex items-center justify-center shrink-0">
-                <Ticket size={20} className="text-emerald-600" />
-              </div>
-
-              <div className="min-w-0">
-                <div className="font-body text-xs font-semibold text-slate-800 leading-tight truncate">
-                  <span>{selectedServices.length} selected </span>
-                  <span className="text-slate-500 font-normal">(~{totalDuration}m)</span>
-                </div>
-                <div className="font-display font-bold text-lg sm:text-xl text-slate-900 leading-tight my-0.5">
-                  ₹{totalPrice}
-                </div>
-                <div className="font-body text-[11px] sm:text-xs font-medium text-emerald-700 flex items-center gap-1 leading-tight">
-                  <Clock size={12} className="text-emerald-600 shrink-0" />
-                  <span>
-                    Arrival: ~{estimatedArrivalMs
-                      ? new Date(estimatedArrivalMs).toLocaleTimeString('en-IN', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: true,
-                        }).toLowerCase()
-                      : 'now'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Vertical Divider */}
-            <div className="h-10 w-[1px] bg-slate-200/90 mx-1 shrink-0" />
-
-            {/* Right: Book Now Button */}
-            <button
-              type="button"
-              onClick={() => setMobileTicketOpen(true)}
-              className="bg-[#059669] hover:bg-[#047857] active:bg-[#065f46] text-white font-body font-semibold text-xs sm:text-sm px-5 sm:px-6 py-3 sm:py-3.5 rounded-2xl shadow-sm transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
-            >
-              <span>Book Now</span>
-              <ArrowRight size={15} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Mobile Drawer Modal for Ticket Details */}
-      {mobileTicketOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 bg-slate-900/60 hardware-accelerated flex items-end justify-center p-0">
-          <div className="bg-white w-full max-h-[85vh] rounded-t-3xl overflow-y-auto p-4 sm:p-5 shadow-2xl relative animate-in slide-in-from-bottom">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-bold text-base text-slate-900">Your Booking Ticket</h3>
-              <button
-                type="button"
-                onClick={handleCloseTicket}
-                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center cursor-pointer"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <BookingTicket
-              selectedServices={selectedServices}
-              totalPrice={totalPrice}
-              totalDuration={totalDuration}
-              estimatedArrivalMs={estimatedArrivalMs}
-              totalChairs={totalChairs}
-              waitMinutes={waitMinutes}
-              payState={payState}
-              payError={payError}
-              onRemoveService={onRemoveService}
-              onPayNow={onPayNow}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -46,7 +46,8 @@ export default function MySalon() {
   const loadServices = async (salonId) => {
     try {
       const response = await serviceAPI.getBySalon(salonId);
-      setServices(response.data.data || []);
+      const list = response.data.data || [];
+      setServices([...list].sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0)));
     } catch (error) {
       console.error('Error loading services:', error);
       // Fallback to default services

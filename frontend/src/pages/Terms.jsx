@@ -1,13 +1,25 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Scissors, Mail, ShieldCheck, Clock, HelpCircle } from 'lucide-react';
+import { ArrowLeft, Scissors, Mail, ShieldCheck, Clock, HelpCircle, AlertCircle } from 'lucide-react';
 import ContactModal from '../components/ContactModal';
 
 export default function Terms() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [contactOpen, setContactOpen] = useState(false);
+
+  useEffect(() => {
+    if (location.hash) {
+      const el = document.getElementById(location.hash.replace('#', ''));
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      }
+    }
+  }, [location.hash]);
 
   return (
     <div className="bg-slate-50 min-h-screen font-sans text-slate-900 pb-16">
@@ -52,10 +64,23 @@ export default function Terms() {
                 <li>
                   <strong className="text-slate-800">Confirmed Queue Placement:</strong> Your place in the salon's live queue is officially locked in only after payment verification. Unfinished or cancelled checkouts do not reserve a queue slot.
                 </li>
-                <li>
-                  <strong className="text-slate-800">No-Show Policy & 24-Hour Refund:</strong> Every booking displays a real-time estimated arrival window. If you do not arrive at the salon within a 15-minute grace period following your estimated arrival time, your booking is automatically marked as a <strong className="text-slate-900">No-Show</strong>, and your queue spot is released to seat waiting customers.
-                  <div className="mt-1 p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-amber-900 text-xs sm:text-sm">
-                    <strong>No-Show Refund Terms:</strong> To fairly compensate the barber for reserved chair time and schedule disruption, a <strong className="text-amber-950">10% cancellation fee</strong> is deducted, and the remaining <strong className="text-amber-950">90% of your booking payment is refunded to your original payment method within 24 hours</strong>.
+                <li id="no-show-policy" className="scroll-mt-6 list-none -ml-5 p-4 rounded-2xl bg-amber-50/80 border border-amber-200/90 shadow-2xs">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle size={20} className="text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-amber-950 font-bold text-sm sm:text-base">No-Show Policy & 15-Minute Grace Period Rules:</strong>
+                      <p className="text-slate-700 text-xs sm:text-sm mt-1">
+                        Every confirmed booking displays a real-time estimated arrival window based on current chairs and queue pace. You receive a <strong className="text-slate-900">strict 15-minute grace period</strong> past your estimated arrival time to check in at the salon.
+                      </p>
+                      <div className="mt-2 space-y-1.5 text-xs sm:text-sm text-slate-600">
+                        <p>
+                          • <strong className="text-slate-900">Slot Release:</strong> If you do not arrive within the 15-minute grace period, your booking is marked as a <strong>No-Show</strong>, and your queue spot is immediately handed to waiting customers to prevent shop delays.
+                        </p>
+                        <p>
+                          • <strong className="text-slate-900">Refund Terms:</strong> To compensate the stylist for reserved chair time and schedule disruption, a <strong>10% cancellation fee</strong> is deducted, and the remaining <strong>90% of your booking amount is automatically refunded to your original payment source within 24 hours</strong>.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </li>
                 <li>

@@ -101,20 +101,27 @@ export default function SalonHeader({ salon, waitMinutes, queueLength, onSelectT
         {/* 3. 3-Stat Metric Strip: Wait Time, In Line, Chairs */}
         {/* Retains current functional wait-time simulation and live indicator while matching image styling */}
         <div className="grid grid-cols-3 divide-x divide-emerald-100/90 mt-4 bg-[#F4FBF7] border border-emerald-100/70 rounded-2xl p-3 sm:p-3.5">
-          {/* 1. Wait Time: Pill around time + subtle live pulse */}
+          {/* 1. Wait Time: Big blinking minutes with live indicator */}
           <button
             type="button"
             onClick={() => onSelectTab && onSelectTab('queue')}
-            className="text-center px-1 group cursor-pointer flex flex-col items-center justify-center"
+            className="text-center px-1 sm:px-2 group cursor-pointer flex flex-col items-center justify-center"
           >
-            <div className="inline-flex items-center justify-center gap-1.5 bg-emerald-100 text-emerald-800 font-bold px-3 py-0.5 rounded-full text-xs sm:text-sm font-mono">
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            <div className="flex items-center justify-center gap-1.5">
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
               </span>
-              <span>{waitMinutes === 0 ? '0m' : `~${waitMinutes}m`}</span>
+              <div className="flex items-baseline gap-1 animate-pulse">
+                <span className="font-display font-extrabold text-2xl sm:text-3xl text-emerald-800 tracking-tight leading-none">
+                  {waitMinutes === 0 ? '0' : `~${waitMinutes}`}
+                </span>
+                <span className="font-display font-bold text-sm sm:text-base text-emerald-700 ">
+                  mins
+                </span>
+              </div>
             </div>
-            <div className="text-[10px] sm:text-[11px] font-bold text-emerald-700 uppercase tracking-wider mt-1.5 whitespace-nowrap">
+            <div className="text-[10px] sm:text-[11px] font-bold text-emerald-800 uppercase tracking-wider mt-1 whitespace-nowrap">
               WAIT TIME
             </div>
           </button>
@@ -125,8 +132,8 @@ export default function SalonHeader({ salon, waitMinutes, queueLength, onSelectT
             onClick={() => onSelectTab && onSelectTab('queue')}
             className="text-center px-1 group cursor-pointer flex flex-col items-center justify-center"
           >
-            <div className="text-base sm:text-lg font-bold text-slate-900 flex items-center justify-center gap-1.5 font-mono">
-              <Users size={16} className="text-slate-600 group-hover:text-slate-900 transition shrink-0" />
+            <div className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center justify-center gap-1.5 font-mono leading-none">
+              <Users size={18} className="text-slate-600 group-hover:text-slate-900 transition shrink-0" />
               <span>{queueLength}</span>
             </div>
             <div className="text-[10px] sm:text-[11px] font-semibold text-slate-600 uppercase tracking-wider mt-1.5 whitespace-nowrap">
@@ -136,8 +143,8 @@ export default function SalonHeader({ salon, waitMinutes, queueLength, onSelectT
 
           {/* 3. Chairs */}
           <div className="text-center px-1 flex flex-col items-center justify-center">
-            <div className="text-base sm:text-lg font-bold text-slate-900 flex items-center justify-center gap-1.5 font-mono">
-              <Users size={16} className="text-slate-600 shrink-0" />
+            <div className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center justify-center gap-1.5 font-mono leading-none">
+              <Users size={18} className="text-slate-600 shrink-0" />
               <span>{salon.totalChairs || 2}</span>
             </div>
             <div className="text-[10px] sm:text-[11px] font-semibold text-slate-600 uppercase tracking-wider mt-1.5 whitespace-nowrap">

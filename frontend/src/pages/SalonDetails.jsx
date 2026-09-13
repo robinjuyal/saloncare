@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { salonAPI, serviceAPI, queueAPI, paymentAPI, reviewAPI, WS_URL } from '../services/api';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
-import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Ticket, Clock, ArrowRight, X } from 'lucide-react';
 import SalonHeader from '../components/salon/SalonHeader';
 import TabBar from '../components/salon/TabBar';
 import ServicesTab from '../components/salon/ServicesTab';
@@ -11,6 +11,7 @@ import WaitingLineTab from '../components/salon/WaitingLineTab';
 import ReviewsTab from '../components/salon/ReviewsTab';
 import AboutTab from '../components/salon/AboutTab';
 import BookingSuccessModal from '../components/salon/BookingSuccessModal';
+import BookingTicket from '../components/salon/BookingTicket';
 
 const PAY_STATE = {
   IDLE: 'IDLE',
@@ -37,6 +38,7 @@ export default function SalonDetails() {
   const [payState, setPayState] = useState(PAY_STATE.IDLE);
   const [payError, setPayError] = useState('');
   const [successBooking, setSuccessBooking] = useState(null);
+  const [ticketModalOpen, setTicketModalOpen] = useState(false);
 
   // Clock tick for wait time estimations
   useEffect(() => {
@@ -96,10 +98,12 @@ export default function SalonDetails() {
     try {
       const res = await serviceAPI.getBySalon(id);
       const list = res.data.data || [];
-      setServices(list);
+      // Strictly sort services in ascending order by service ID
+      const sorted = [...list].sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+      setServices(sorted);
       // Auto-select first service for immediate arrival calculation
-      if (list.length > 0 && selectedServices.length === 0) {
-        setSelectedServices([list[0]]);
+      if (sorted.length > 0 && selectedServices.length === 0) {
+        setSelectedServices([sorted[0]]);
       }
     } catch (e) {
       console.error(e);
@@ -279,6 +283,35 @@ export default function SalonDetails() {
     razorpay.open();
   };
 
+  // Handle hardware/browser back button: close ticket modal instead of navigating away
+  useEffect(() => {
+    if (ticketModalOpen) {
+      window.history.pushState({ modal: 'ticket' }, '');
+      const handlePopState = () => {
+        setTicketModalOpen(false);
+      };
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    }
+  }, [ticketModalOpen]);
+
+  const handleCloseTicket = () => {
+    if (window.history.state?.modal === 'ticket') {
+      window.history.back();
+    } else {
+      setTicketModalOpen(false);
+    }
+  };
+
+  // Close ticket modal automatically when payment succeeds
+  useEffect(() => {
+    if (payState === PAY_STATE.SUCCESS) {
+      setTicketModalOpen(false);
+    }
+  }, [payState]);
+
   // Submit new review
   const handleSubmitReview = async (rating, comment) => {
     await reviewAPI.submitReview(id, rating, comment);
@@ -319,7 +352,7 @@ export default function SalonDetails() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 pb-16 font-sans">
+    <div className={`min-h-screen bg-[#F8FAFC] text-slate-900 font-sans ${selectedServices.length > 0 ? 'pb-28 sm:pb-32 lg:pb-16' : 'pb-16'}`}>
       <div className="max-w-6xl mx-auto px-3.5 sm:px-6 pt-3.5 sm:pt-6">
         {/* Top Back Navigation */}
         <button
@@ -390,6 +423,112 @@ export default function SalonDetails() {
         {/* Tab 4: About */}
         {activeTab === 'about' && <AboutTab salon={salon} />}
       </div>
+
+      {/* Sticky Bottom Summary Bar - visible across ALL tabs whenever services are selected */}
+      {selectedServices.length > 0 && (
+        <div
+          className={`fixed bottom-3 left-3 right-3 z-40 max-w-md mx-auto pointer-events-none ${
+            activeTab === 'services' ? 'lg:hidden' : 'lg:bottom-6 lg:right-6 lg:left-auto lg:mr-0 lg:max-w-sm'
+          }`}
+        >
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => setTicketModalOpen(true)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setTicketModalOpen(true);
+              }
+            }}
+            className="bg-[#f0faf5] hover:bg-[#e4f7ee] active:bg-[#dbf3e7] border border-emerald-200/90 rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 px-4 sm:px-4.5 shadow-lg shadow-emerald-950/10 flex items-center justify-between gap-3 pointer-events-auto cursor-pointer transition-all duration-150 select-none group"
+            title="Click to view token & booking summary"
+          >
+            {/* Left: Ticket icon + service details (Clickable) */}
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100/80 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <Ticket size={20} className="text-emerald-600" />
+              </div>
+
+              <div className="min-w-0">
+                <div className="font-body text-xs font-semibold text-slate-800 leading-tight truncate">
+                  <span>{selectedServices.length} selected </span>
+                  <span className="text-slate-500 font-normal">(~{totalDuration}m)</span>
+                </div>
+                <div className="font-display font-bold text-lg sm:text-xl text-slate-900 leading-tight my-0.5">
+                  ₹{totalPrice}
+                </div>
+                <div className="font-body text-[11px] sm:text-xs font-medium text-emerald-700 flex items-center gap-1 leading-tight">
+                  <Clock size={12} className="text-emerald-600 shrink-0" />
+                  <span>
+                    Arrival: ~{estimatedArrivalMs
+                      ? new Date(estimatedArrivalMs).toLocaleTimeString('en-IN', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true,
+                        }).toLowerCase()
+                      : 'now'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Vertical Divider */}
+            <div className="h-10 w-[1px] bg-slate-200/90 mx-1 shrink-0" />
+
+            {/* Right: Book Now Button (Also opens ticket modal / checkout) */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setTicketModalOpen(true);
+              }}
+              className="bg-[#059669] hover:bg-[#047857] active:bg-[#065f46] text-white font-body font-semibold text-xs sm:text-sm px-5 sm:px-6 py-3 sm:py-3.5 rounded-2xl shadow-sm transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+            >
+              <span>Book Now</span>
+              <ArrowRight size={15} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Booking Ticket Drawer Modal */}
+      {ticketModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity"
+          onClick={handleCloseTicket}
+        >
+          <div
+            className="bg-white w-full max-w-md max-h-[88vh] rounded-t-3xl sm:rounded-2xl overflow-y-auto p-4 sm:p-5 shadow-2xl relative animate-in slide-in-from-bottom"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-bold text-base text-slate-900">Your Booking Ticket</h3>
+              <button
+                type="button"
+                onClick={handleCloseTicket}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer transition"
+                title="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <BookingTicket
+              selectedServices={selectedServices}
+              totalPrice={totalPrice}
+              totalDuration={totalDuration}
+              estimatedArrivalMs={estimatedArrivalMs}
+              totalChairs={totalChairs}
+              waitMinutes={waitMinutes}
+              payState={payState}
+              payError={payError}
+              onRemoveService={handleRemoveService}
+              onPayNow={handlePayNow}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Booking Success Confirmation Modal */}
       {successBooking && (

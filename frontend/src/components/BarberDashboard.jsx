@@ -146,7 +146,8 @@ export default function BarberDashboard({ salonId }) {
   const loadServices = async () => {
     try {
       const response = await serviceAPI.getBySalon(salonId);
-      setServices(response.data.data || []);
+      const list = response.data.data || [];
+      setServices([...list].sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0)));
     } catch (error) {
       console.error('Error loading services:', error);
     }
