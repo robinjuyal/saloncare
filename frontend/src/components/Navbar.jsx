@@ -65,7 +65,7 @@ export default function Navbar() {
           <Link
             to={homeRoute}
             title="Home"
-            className={`group flex items-center gap-2 rounded-xl transition-colors duration-150 flex-shrink-0 p-2 sm:px-3.5 sm:py-2 select-none ${
+            className={`group relative flex items-center gap-2 rounded-xl transition-colors duration-150 flex-shrink-0 p-2 sm:px-3.5 sm:py-2 select-none ${
               isActive(homeRoute)
                 ? 'bg-white/10 text-white font-bold border border-white/20 shadow-xs'
                 : 'text-slate-300 hover:text-white hover:bg-slate-900 active:bg-slate-800 font-medium'
@@ -81,6 +81,9 @@ export default function Navbar() {
               <Home size={16} />
             </div>
             <span className="text-sm sm:text-base tracking-tight">Home</span>
+            {isActive(homeRoute) && (
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-emerald-400 rounded-full"></span>
+            )}
           </Link>
 
           {/* Right side — nav links + user + overflow menu */}

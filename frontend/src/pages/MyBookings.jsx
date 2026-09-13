@@ -11,12 +11,9 @@ import {
   AlertCircle,
   RefreshCw,
   Star,
-  Search,
-  ExternalLink,
   Copy,
   Check,
   ChevronDown,
-  Sparkles,
   Scissors,
   ArrowRight,
   Info,
@@ -127,10 +124,8 @@ export default function MyBookings() {
   const [refreshing, setRefreshing] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Filter & Search states
-  const [activeFilter, setActiveFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED'
-  const [searchQuery, setSearchQuery] = useState('');
-  const [visibleCount, setVisibleCount] = useState(10);
+  // Pagination state (default latest 5 bookings)
+  const [visibleCount, setVisibleCount] = useState(5);
   const [copiedCode, setCopiedCode] = useState(null);
 
   // Review states: keyed by salonId to avoid duplicate requests & storage
@@ -265,49 +260,13 @@ export default function MyBookings() {
     }
   };
 
-  // ── Filter & Search Logic ──────────────────────────────────────────────────
-  const filteredBookings = useMemo(() => {
-    return bookings.filter((b) => {
-      // Status filter
-      if (activeFilter === 'ACTIVE') {
-        if (b.status !== 'CONFIRMED' && b.status !== 'IN_PROGRESS') return false;
-      } else if (activeFilter === 'COMPLETED') {
-        if (b.status !== 'COMPLETED') return false;
-      } else if (activeFilter === 'CANCELLED') {
-        if (b.status !== 'CANCELLED' && b.status !== 'NO_SHOW') return false;
-      }
-
-      // Search filter
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const salonMatch = b.salonName?.toLowerCase().includes(q);
-        const codeMatch = b.bookingCode?.toLowerCase().includes(q);
-        const serviceMatch = b.serviceName?.toLowerCase().includes(q);
-        if (!salonMatch && !codeMatch && !serviceMatch) return false;
-      }
-
-      return true;
+  // ── Sorted Bookings (Latest first) ─────────────────────────────────────────
+  const sortedBookings = useMemo(() => {
+    return [...bookings].sort((a, b) => {
+      const timeA = new Date(a.createdAt || a.scheduledTime || 0).getTime();
+      const timeB = new Date(b.createdAt || b.scheduledTime || 0).getTime();
+      return timeB - timeA;
     });
-  }, [bookings, activeFilter, searchQuery]);
-
-  // Counts for filter pills
-  const counts = useMemo(() => {
-    let active = 0;
-    let completed = 0;
-    let cancelled = 0;
-    bookings.forEach((b) => {
-      if (b.status === 'CONFIRMED' || b.status === 'IN_PROGRESS') active++;
-      else if (b.status === 'COMPLETED') completed++;
-      else if (b.status === 'CANCELLED' || b.status === 'NO_SHOW') cancelled++;
-    });
-    return { all: bookings.length, active, completed, cancelled };
-  }, [bookings]);
-
-  // Active Spotlight booking (first confirmed or in_progress)
-  const spotlightBooking = useMemo(() => {
-    return bookings.find(
-      (b) => b.status === 'IN_PROGRESS' || b.status === 'CONFIRMED'
-    );
   }, [bookings]);
 
   // ── Status Pill Badge Component ────────────────────────────────────────────
@@ -315,7 +274,7 @@ export default function MyBookings() {
     switch (status) {
       case 'CONFIRMED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-body text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -325,35 +284,35 @@ export default function MyBookings() {
         );
       case 'IN_PROGRESS':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-xs shadow-emerald-600/30">
-            <Scissors size={12} className="animate-bounce" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-body text-xs font-bold bg-emerald-600 text-white shadow-2xs">
+            <Scissors size={11} className="animate-bounce" />
             In Chair
           </span>
         );
       case 'COMPLETED':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/80">
-            <CheckCircle2 size={12} className="text-emerald-600" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-body text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/80">
+            <CheckCircle2 size={11} className="text-emerald-600" />
             Completed
           </span>
         );
       case 'CANCELLED':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200">
-            <XCircle size={12} />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-body text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200">
+            <XCircle size={11} />
             Cancelled
           </span>
         );
       case 'NO_SHOW':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-            <AlertCircle size={12} />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-body text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+            <AlertCircle size={11} />
             No Show
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-body text-xs font-semibold bg-slate-100 text-slate-500">
             {status}
           </span>
         );
@@ -403,21 +362,18 @@ export default function MyBookings() {
 
       <div className="max-w-2xl mx-auto px-4 py-5 sm:py-7">
         {/* ── Page Header ── */}
-        <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex items-center justify-between gap-3 mb-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="font-display font-semibold text-2xl sm:text-3xl text-slate-900 tracking-tight">
               My Bookings
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Track live queues, token numbers & service receipts
-            </p>
           </div>
 
           <button
             type="button"
             onClick={() => loadBookings(true)}
             disabled={refreshing}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 text-xs font-semibold shadow-xs transition cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 font-body text-xs font-semibold shadow-2xs transition cursor-pointer"
             title="Refresh bookings"
           >
             <RefreshCw size={13} className={refreshing ? 'animate-spin text-emerald-600' : ''} />
@@ -425,181 +381,22 @@ export default function MyBookings() {
           </button>
         </div>
 
-        {/* ── Live Active Spotlight Banner (if active booking exists) ── */}
-        {spotlightBooking && activeFilter !== 'COMPLETED' && activeFilter !== 'CANCELLED' && (
-          <div className="bg-slate-900 text-white rounded-3xl p-5 sm:p-6 mb-6 shadow-lg shadow-slate-900/10 relative overflow-hidden">
-            {/* Ambient emerald background glow */}
-            <div className="absolute -top-12 -right-12 w-44 h-44 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
-
-            <div className="relative z-10">
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    LIVE TICKET
-                  </span>
-                  {spotlightBooking.queuePosition && (
-                    <span className="text-xs text-slate-300 font-medium">
-                      Position #{spotlightBooking.queuePosition} in line
-                    </span>
-                  )}
-                </div>
-
-                <StatusBadge status={spotlightBooking.status} />
-              </div>
-
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
-                <div>
-                  <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white">
-                    {spotlightBooking.salonName}
-                  </h2>
-                  <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                    <MapPin size={12} className="shrink-0 text-slate-400" />
-                    <span className="truncate">{spotlightBooking.salonAddress || 'Local Partner Salon'}</span>
-                  </p>
-                  <p className="text-xs text-emerald-400 font-medium mt-1">
-                    {spotlightBooking.serviceName}
-                  </p>
-                </div>
-
-                <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl p-3 sm:px-4 text-center sm:text-right shrink-0">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-300 block">
-                    Estimated Arrival
-                  </span>
-                  <div className="text-xl sm:text-2xl font-mono font-black text-white mt-0.5">
-                    {formatArrivalTime(spotlightBooking)}
-                  </div>
-                  <div className="text-xs font-semibold text-emerald-400">
-                    {getWaitMinutes(spotlightBooking) === 0
-                      ? 'Ready now!'
-                      : `~${getWaitMinutes(spotlightBooking)} min wait`}
-                  </div>
-                </div>
-              </div>
-
-              {/* Action buttons inside spotlight */}
-              <div className="flex items-center gap-2.5 mt-4 pt-3 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={() => copyCode(spotlightBooking.bookingCode)}
-                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-3.5 py-2 rounded-xl text-xs font-mono font-bold transition cursor-pointer"
-                >
-                  {copiedCode === spotlightBooking.bookingCode ? (
-                    <>
-                      <Check size={13} className="text-emerald-400" />
-                      <span>Copied!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Tag size={13} className="text-slate-300" />
-                      <span>{spotlightBooking.bookingCode}</span>
-                      <Copy size={11} className="text-slate-400 ml-0.5" />
-                    </>
-                  )}
-                </button>
-
-                {spotlightBooking.salonId && (
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/salon/${spotlightBooking.salonId}`)}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
-                  >
-                    <span>View Live Floor & Queue</span>
-                    <ArrowRight size={13} />
-                  </button>
-                )}
-              </div>
+        {/* ── Bookings List (Latest 5 default with Show more) ── */}
+        {sortedBookings.length === 0 ? (
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-10 text-center shadow-2xs">
+            <div className="w-12 h-12 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center mx-auto mb-3 border border-slate-100">
+              <Calendar size={24} />
             </div>
-          </div>
-        )}
-
-        {/* ── Search and Filter Controls ── */}
-        <div className="space-y-3 mb-5">
-          {/* Quick Search Bar */}
-          {bookings.length > 3 && (
-            <div className="relative">
-              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by salon, service, or booking code..."
-                className="w-full bg-white border border-slate-200/90 rounded-2xl pl-9 pr-4 py-2 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 shadow-xs transition"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 cursor-pointer"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Filter Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar pb-1">
-            {[
-              { id: 'ALL', label: 'All', count: counts.all },
-              { id: 'ACTIVE', label: 'Active', count: counts.active, isLive: counts.active > 0 },
-              { id: 'COMPLETED', label: 'Completed', count: counts.completed },
-              { id: 'CANCELLED', label: 'Cancelled', count: counts.cancelled },
-            ].map((tab) => {
-              const isActive = activeFilter === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => {
-                    setActiveFilter(tab.id);
-                    setVisibleCount(10); // reset pagination on filter change
-                  }}
-                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
-                    isActive
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'bg-white text-slate-600 border border-slate-200/80 hover:border-slate-300 hover:bg-slate-50'
-                  }`}
-                >
-                  {tab.isLive && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  )}
-                  <span>{tab.label}</span>
-                  <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    {tab.count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── Bookings List ── */}
-        {filteredBookings.length === 0 ? (
-          <div className="bg-white border border-slate-200/90 rounded-3xl p-10 text-center shadow-xs">
-            <div className="w-14 h-14 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-slate-100">
-              <Calendar size={28} />
-            </div>
-            <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1">
-              {searchQuery
-                ? 'No matching bookings found'
-                : activeFilter === 'ALL'
-                ? 'No bookings yet'
-                : `No ${activeFilter.toLowerCase()} bookings`}
+            <h3 className="font-display font-semibold text-base sm:text-lg text-slate-900 mb-1">
+              No bookings yet
             </h3>
-            <p className="text-xs sm:text-sm text-slate-500 mb-5 max-w-sm mx-auto">
-              {searchQuery
-                ? 'Try a different keyword or clear your search query.'
-                : 'Explore top rated neighbourhood salons, check live wait times, and skip the line.'}
+            <p className="font-body text-xs sm:text-sm text-slate-500 mb-5 max-w-sm mx-auto">
+              Explore top rated neighbourhood salons, check live wait times, and skip the line.
             </p>
             <button
               type="button"
               onClick={() => navigate('/home')}
-              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition shadow-sm shadow-emerald-600/20 cursor-pointer"
+              className="inline-flex items-center gap-2 bg-black hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-body font-semibold text-xs sm:text-sm transition shadow-2xs cursor-pointer"
             >
               <span>Explore Salons</span>
               <ArrowRight size={14} />
@@ -607,30 +404,30 @@ export default function MyBookings() {
           </div>
         ) : (
           <div className="space-y-3.5">
-            {filteredBookings.slice(0, visibleCount).map((booking) => {
+            {sortedBookings.slice(0, visibleCount).map((booking) => {
               const waitMin = getWaitMinutes(booking);
               const salonReviewStatus = reviewStatuses[booking.salonId];
 
               return (
                 <div
                   key={booking.id || booking.bookingCode}
-                  className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-xs hover:border-slate-300 transition-all group"
+                  className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-2xs hover:border-slate-300 transition-colors group"
                 >
                   {/* Card Header: Salon Name & Status Pill */}
                   <div className="p-4 sm:p-5 pb-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <h3 className="text-base sm:text-lg font-bold text-slate-900 truncate">
+                          <h3 className="font-display font-semibold text-base sm:text-lg text-slate-900 tracking-tight truncate">
                             {booking.salonName || 'Salon'}
                           </h3>
-                          <span className="shrink-0 inline-flex items-center text-emerald-600 text-[10px] font-semibold bg-emerald-50 px-1.5 py-0.5 rounded-md">
+                          <span className="shrink-0 inline-flex items-center text-emerald-700 text-[10px] font-semibold bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.5 rounded">
                             Verified
                           </span>
                         </div>
 
                         {booking.salonAddress && (
-                          <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5 truncate">
+                          <p className="font-body text-xs text-slate-500 flex items-center gap-1 mt-0.5 truncate">
                             <MapPin size={12} className="shrink-0 text-slate-400" />
                             <span className="truncate">{booking.salonAddress}</span>
                           </p>
@@ -646,7 +443,7 @@ export default function MyBookings() {
                     <div className="grid grid-cols-3 gap-2 mt-3.5 p-2.5 rounded-xl bg-slate-50/80 border border-slate-100 text-xs">
                       {/* Token Code */}
                       <div className="min-w-0">
-                        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                        <p className="font-body text-[10px] uppercase font-semibold text-slate-400 tracking-wider">
                           Token Code
                         </p>
                         <button
@@ -667,17 +464,17 @@ export default function MyBookings() {
 
                       {/* Services */}
                       <div className="min-w-0">
-                        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                        <p className="font-body text-[10px] uppercase font-semibold text-slate-400 tracking-wider">
                           Services
                         </p>
-                        <p className="font-semibold text-slate-800 text-xs sm:text-sm mt-0.5 truncate" title={booking.serviceName}>
+                        <p className="font-body font-medium text-slate-800 text-xs sm:text-sm mt-0.5 truncate" title={booking.serviceName}>
                           {booking.serviceName || 'Standard Service'}
                         </p>
                       </div>
 
                       {/* Price / Paid */}
                       <div className="min-w-0 text-right">
-                        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                        <p className="font-body text-[10px] uppercase font-semibold text-slate-400 tracking-wider">
                           Amount
                         </p>
                         <p className="font-mono font-bold text-slate-900 text-xs sm:text-sm mt-0.5">
@@ -687,7 +484,7 @@ export default function MyBookings() {
                     </div>
 
                     {/* Booked Timestamp */}
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2.5 px-0.5">
+                    <div className="flex items-center justify-between font-body text-[11px] text-slate-400 mt-2.5 px-0.5">
                       <span className="flex items-center gap-1">
                         <Calendar size={12} className="text-slate-400" />
                         Booked on {formatDate(booking.scheduledTime || booking.createdAt)}
@@ -710,14 +507,14 @@ export default function MyBookings() {
                           <Clock size={16} />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[10px] uppercase font-bold tracking-wider text-emerald-800">
+                          <p className="font-body text-[10px] uppercase font-semibold tracking-wider text-emerald-800">
                             Estimated Arrival
                           </p>
                           <div className="flex items-center gap-1.5 font-mono">
                             <span className="font-bold text-slate-900 text-sm sm:text-base">
                               {formatArrivalTime(booking)}
                             </span>
-                            <span className="text-xs font-semibold text-emerald-700">
+                            <span className="font-body text-xs font-semibold text-emerald-700">
                               (≈ {waitMin ?? 0}m wait)
                             </span>
                           </div>
@@ -727,7 +524,7 @@ export default function MyBookings() {
                       <button
                         type="button"
                         onClick={() => navigate(`/salon/${booking.salonId}`)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 font-bold text-xs transition shadow-2xs shrink-0 cursor-pointer"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 font-body font-semibold text-xs transition shadow-2xs shrink-0 cursor-pointer"
                       >
                         <span>Queue Floor</span>
                         <ArrowRight size={12} />
@@ -738,7 +535,7 @@ export default function MyBookings() {
                   {/* 2. IN PROGRESS STRIP */}
                   {booking.status === 'IN_PROGRESS' && (
                     <div className="border-t border-emerald-200 bg-emerald-600 text-white p-3 sm:px-5 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 text-xs sm:text-sm font-bold">
+                      <div className="flex items-center gap-2 font-body text-xs sm:text-sm font-semibold">
                         <Scissors size={15} className="animate-bounce" />
                         <span>You are currently in the chair with your stylist!</span>
                       </div>
@@ -746,7 +543,7 @@ export default function MyBookings() {
                         <button
                           type="button"
                           onClick={() => navigate(`/salon/${booking.salonId}`)}
-                          className="text-xs bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-lg font-semibold transition cursor-pointer"
+                          className="font-body text-xs bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-lg font-semibold transition cursor-pointer"
                         >
                           Salon details
                         </button>
@@ -757,7 +554,7 @@ export default function MyBookings() {
                   {/* 3. COMPLETED STRIP */}
                   {booking.status === 'COMPLETED' && (
                     <div className="border-t border-slate-100 bg-slate-50/70 p-3 sm:px-5 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+                      <div className="flex items-center gap-1.5 font-body text-xs text-slate-600 font-medium">
                         <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
                         <span>Service completed</span>
                       </div>
@@ -774,16 +571,16 @@ export default function MyBookings() {
                                 bookingCode: booking.bookingCode,
                               })
                             }
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-black hover:bg-slate-800 text-white rounded-xl font-body text-xs font-semibold transition shadow-2xs cursor-pointer"
                           >
-                            <Star size={12} className="fill-white" />
+                            <Star size={11} className="fill-amber-400 text-amber-400" />
                             <span>Rate Salon</span>
                           </button>
                         )}
 
                         {salonReviewStatus === 'already_reviewed' && (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-2.5 py-1 rounded-lg">
-                            <Star size={12} className="fill-emerald-600 text-emerald-600" />
+                          <span className="inline-flex items-center gap-1 font-body text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-2.5 py-1 rounded-lg">
+                            <Star size={11} className="fill-emerald-600 text-emerald-600" />
                             Reviewed
                           </span>
                         )}
@@ -792,7 +589,7 @@ export default function MyBookings() {
                           <button
                             type="button"
                             onClick={() => navigate(`/salon/${booking.salonId}`)}
-                            className="text-xs text-slate-500 hover:text-slate-900 font-medium px-1.5 py-1 transition cursor-pointer"
+                            className="font-body text-xs text-slate-500 hover:text-slate-900 font-medium px-1.5 py-1 transition cursor-pointer"
                           >
                             Book again →
                           </button>
@@ -807,7 +604,7 @@ export default function MyBookings() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-2 min-w-0">
                           <Info size={14} className="text-slate-400 shrink-0 mt-0.5" />
-                          <div className="text-xs text-slate-600">
+                          <div className="font-body text-xs text-slate-600">
                             <span className="font-semibold text-slate-700">
                               {booking.status === 'CANCELLED' ? 'Booking cancelled' : 'Marked as no-show'}
                             </span>
@@ -823,7 +620,7 @@ export default function MyBookings() {
                           <button
                             type="button"
                             onClick={() => navigate(`/salon/${booking.salonId}`)}
-                            className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold shrink-0 cursor-pointer"
+                            className="font-body text-xs text-emerald-600 hover:text-emerald-700 font-semibold shrink-0 cursor-pointer"
                           >
                             Rebook →
                           </button>
@@ -835,18 +632,16 @@ export default function MyBookings() {
               );
             })}
 
-            {/* ── Client-Side Pagination / Load More ── */}
-            {filteredBookings.length > visibleCount && (
-              <div className="text-center pt-3">
+            {/* ── Client-Side Pagination / Show more ── */}
+            {sortedBookings.length > visibleCount && (
+              <div className="text-center pt-3 pb-1">
                 <button
                   type="button"
-                  onClick={() => setVisibleCount((prev) => prev + 10)}
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs sm:text-sm font-bold shadow-xs transition cursor-pointer"
+                  onClick={() => setVisibleCount((prev) => prev + 5)}
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 font-body text-xs sm:text-sm font-semibold shadow-2xs transition cursor-pointer"
                 >
                   <ChevronDown size={14} />
-                  <span>
-                    Show more ({filteredBookings.length - visibleCount} remaining)
-                  </span>
+                  <span>Show more</span>
                 </button>
               </div>
             )}

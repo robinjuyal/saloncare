@@ -319,15 +319,15 @@ export default function SalonDetails() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16 font-sans">
-      <div className="max-w-6xl mx-auto px-3 sm:px-6 pt-4 sm:pt-6">
-        {/* Top Back Navigation with increased text size */}
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 pb-16 font-sans">
+      <div className="max-w-6xl mx-auto px-3.5 sm:px-6 pt-3.5 sm:pt-6">
+        {/* Top Back Navigation */}
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-bold mb-3 sm:mb-4 transition text-sm sm:text-base cursor-pointer"
+          className="flex items-center gap-2 text-slate-800 hover:text-slate-950 font-bold mb-3.5 transition text-sm sm:text-base cursor-pointer"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={18} className="text-slate-800" />
           <span>Back to Salons</span>
         </button>
 

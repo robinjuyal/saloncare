@@ -70,34 +70,51 @@ export default function BookingTicket({
         <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
           Items in your visit
         </div>
-        {selectedServices.map((service) => (
-          <div
-            key={service.id}
-            className="flex items-center justify-between text-xs sm:text-sm bg-slate-50 p-2.5 rounded-xl border border-slate-200/60"
-          >
-            <div className="flex-1 min-w-0 pr-2">
-              <div className="font-semibold text-slate-800 truncate">
-                {service.name}
+        {selectedServices.map((service) => {
+          const serviceImg = service?.imageUrl || service?.image || service?.photoUrl || service?.image_url;
+          return (
+            <div
+              key={service.id}
+              className="flex items-center justify-between text-xs sm:text-sm bg-slate-50 p-2.5 rounded-xl border border-slate-200/60"
+            >
+              <div className="flex items-center gap-2.5 flex-1 min-w-0 pr-2">
+                {serviceImg ? (
+                  <img
+                    src={serviceImg}
+                    alt={service.name}
+                    className="w-9 h-9 rounded-lg object-cover shrink-0 border border-slate-200/70"
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : null}
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-slate-800 truncate">
+                    {service.name}
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    {service.durationMinutes} mins
+                  </div>
+                </div>
               </div>
-              <div className="text-[11px] text-slate-500">
-                {service.durationMinutes} mins
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-bold text-slate-900">
+                  ₹{service.price}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onRemoveService(service.id)}
+                  className="w-6 h-6 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition cursor-pointer"
+                  title="Remove service"
+                >
+                  <X size={14} />
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono font-bold text-slate-900">
-                ₹{service.price}
-              </span>
-              <button
-                type="button"
-                onClick={() => onRemoveService(service.id)}
-                className="w-6 h-6 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition cursor-pointer"
-                title="Remove service"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Pricing & Duration Row */}
