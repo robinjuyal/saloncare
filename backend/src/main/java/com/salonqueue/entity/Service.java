@@ -39,7 +39,13 @@ public class Service {
     
     private String imageUrl;
     
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gender")
+    @Builder.Default
+    private TargetGender gender = TargetGender.MEN;
+    
     @Column(nullable = false)
+    @Builder.Default
     private Boolean active = true;
     
     @CreationTimestamp
@@ -59,6 +65,13 @@ public class Service {
     // have multiple services (see BookingServiceItem). Nothing in the
     // codebase actually called .getBookings() here, so removed rather than
     // redirected to map through BookingServiceItem instead.
+
+    public enum TargetGender {
+        MEN,
+        WOMEN,
+        UNISEX,
+        ALL
+    }
 
     public enum ServiceCategory {
         HAIRCUT,

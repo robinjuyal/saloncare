@@ -10,6 +10,12 @@ export default {
         sans: ['Inter var', 'system-ui', 'sans-serif'],
         // ── Salon theme (customer-facing pages) ──
         display: ['"Fraunces"', 'serif'],
+        brand: ['"Playfair Display"', 'Georgia', 'serif'],
+        syne: ['"Syne"', 'sans-serif'],
+        cinzel: ['"Cinzel"', 'serif'],
+        cormorant: ['"Cormorant Garamond"', 'serif'],
+        prata: ['"Prata"', 'serif'],
+        outfit: ['"Outfit"', 'sans-serif'],
         body: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
         mono: ['"IBM Plex Mono"', 'monospace'],
       },

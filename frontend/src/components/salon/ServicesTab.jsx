@@ -1,29 +1,26 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   Scissors,
-  User,
   Palette,
   Sparkles,
   Search,
-  Check,
-  Plus,
   X,
   Clock,
   AlertCircle,
 } from 'lucide-react';
 import BookingTicket from './BookingTicket';
 
-// Service Avatar Illustration Helper
+// Compact Service Avatar Illustration Helper
 function ServiceAvatar({ category, name }) {
   const n = (name || '').toLowerCase();
   const c = (category || '').toUpperCase();
 
   if (n.includes('women') || n.includes('female') || n.includes('girl') || n.includes('lady')) {
     return (
-      <div className="w-28 h-28 sm:w-[135px] sm:h-[135px] rounded-md bg-[#FFE4E6] flex items-center justify-center shrink-0 overflow-hidden">
-        <svg viewBox="0 0 48 48" className="w-16 h-16 sm:w-20 sm:h-20 text-rose-500 fill-current" aria-hidden="true">
-          <path d="M24 6c-6.6 0-12 5.4-12 12 0 4.2 2.2 7.9 5.5 10v3c0 1.7 1.3 3 3 3h7c1.7 0 3-1.3 3-3v-3c3.3-2.1 5.5-5.8 5.5-10 0-6.6-5.4-12-12-12zm-3.5 13c-1.4 0-2.5-1.1-2.5-2.5S19.1 14 20.5 14s2.5 1.1 2.5 2.5-1.1 2.5-2.5 2.5zm7 0c-1.4 0-2.5-1.1-2.5-2.5s1.1-2.5 2.5-2.5 2.5 1.1 2.5 2.5-1.1 2.5-2.5 2.5z" opacity="0.85"/>
-          <path d="M14 20c-1.5 2.5-2 6-1.5 10 1.5-1 3-2 4-3.5-1-2-1.8-4.2-2.5-6.5zm20 0c-.7 2.3-1.5 4.5-2.5 6.5 1 1.5 2.5 2.5 4 3.5.5-4 0-7.5-1.5-10z"/>
+      <div className="self-stretch w-[72px] sm:w-[80px] rounded-xl bg-[#FFE4E6] flex items-center justify-center shrink-0 overflow-hidden">
+        <svg viewBox="0 0 48 48" className="w-9 h-9 sm:w-10 sm:h-10 text-rose-500 fill-current" aria-hidden="true">
+          <path d="M24 6c-6.6 0-12 5.4-12 12 0 4.2 2.2 7.9 5.5 10v3c0 1.7 1.3 3 3 3h7c1.7 0 3-1.3 3-3v-3c3.3-2.1 5.5-5.8 5.5-10 0-6.6-5.4-12-12-12zm-3.5 13c-1.4 0-2.5-1.1-2.5-2.5S19.1 14 20.5 14s2.5 1.1 2.5 2.5-1.1 2.5-2.5 2.5zm7 0c-1.4 0-2.5-1.1-2.5-2.5s1.1-2.5 2.5-2.5 2.5 1.1 2.5 2.5-1.1 2.5-2.5 2.5z" opacity="0.85" />
+          <path d="M14 20c-1.5 2.5-2 6-1.5 10 1.5-1 3-2 4-3.5-1-2-1.8-4.2-2.5-6.5zm20 0c-.7 2.3-1.5 4.5-2.5 6.5 1 1.5 2.5 2.5 4 3.5.5-4 0-7.5-1.5-10z" />
         </svg>
       </div>
     );
@@ -31,10 +28,10 @@ function ServiceAvatar({ category, name }) {
 
   if (c === 'BEARD' || n.includes('beard') || n.includes('shave') || n.includes('mustache')) {
     return (
-      <div className="w-28 h-28 sm:w-[135px] sm:h-[135px] rounded-md bg-[#FEF3C7] flex items-center justify-center shrink-0 overflow-hidden">
-        <svg viewBox="0 0 48 48" className="w-16 h-16 sm:w-20 sm:h-20 text-amber-600 fill-current" aria-hidden="true">
+      <div className="self-stretch w-[72px] sm:w-[80px] rounded-xl bg-[#FEF3C7] flex items-center justify-center shrink-0 overflow-hidden">
+        <svg viewBox="0 0 48 48" className="w-9 h-9 sm:w-10 sm:h-10 text-amber-600 fill-current" aria-hidden="true">
           <circle cx="24" cy="17" r="7" />
-          <path d="M16 26c0 6 3.6 11 8 11s8-5 8-11c0-2-1.5-3-3-3h-10c-1.5 0-3 1-3 3zm8 6c-2.2 0-4-1.3-4-3h8c0 1.7-1.8 3-4 3z"/>
+          <path d="M16 26c0 6 3.6 11 8 11s8-5 8-11c0-2-1.5-3-3-3h-10c-1.5 0-3 1-3 3zm8 6c-2.2 0-4-1.3-4-3h8c0 1.7-1.8 3-4 3z" />
         </svg>
       </div>
     );
@@ -42,9 +39,9 @@ function ServiceAvatar({ category, name }) {
 
   if (c === 'HAIR_COLOR' || n.includes('color') || n.includes('dye') || n.includes('highlight')) {
     return (
-      <div className="w-28 h-28 sm:w-[135px] sm:h-[135px] rounded-md bg-[#EDE9FE] flex items-center justify-center shrink-0 overflow-hidden">
-        <svg viewBox="0 0 48 48" className="w-16 h-16 sm:w-20 sm:h-20 text-purple-600 fill-current" aria-hidden="true">
-          <path d="M24 6C15.2 6 8 13.2 8 22c0 4.5 1.9 8.6 5 11.5 1.4 1.3 2.5 3 2.5 5 0 2 1.6 3.5 3.5 3.5h10c1.9 0 3.5-1.6 3.5-3.5 0-2 1.1-3.7 2.5-5 3.1-2.9 5-7 5-11.5 0-8.8-7.2-16-16-16zm-7 15c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3zm6-6c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3zm8 6c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/>
+      <div className="self-stretch w-[72px] sm:w-[80px] rounded-xl bg-[#EDE9FE] flex items-center justify-center shrink-0 overflow-hidden">
+        <svg viewBox="0 0 48 48" className="w-9 h-9 sm:w-10 sm:h-10 text-purple-600 fill-current" aria-hidden="true">
+          <path d="M24 6C15.2 6 8 13.2 8 22c0 4.5 1.9 8.6 5 11.5 1.4 1.3 2.5 3 2.5 5 0 2 1.6 3.5 3.5 3.5h10c1.9 0 3.5-1.6 3.5-3.5 0-2 1.1-3.7 2.5-5 3.1-2.9 5-7 5-11.5 0-8.8-7.2-16-16-16zm-7 15c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3zm6-6c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3zm8 6c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z" />
         </svg>
       </div>
     );
@@ -52,21 +49,21 @@ function ServiceAvatar({ category, name }) {
 
   if (c === 'FACIAL' || c === 'MASSAGE' || n.includes('facial') || n.includes('spa') || n.includes('massage')) {
     return (
-      <div className="w-28 h-28 sm:w-[135px] sm:h-[135px] rounded-md bg-[#E0F2FE] flex items-center justify-center shrink-0 overflow-hidden">
-        <svg viewBox="0 0 48 48" className="w-16 h-16 sm:w-20 sm:h-20 text-sky-600 fill-current" aria-hidden="true">
-          <circle cx="24" cy="22" r="11" opacity="0.8"/>
-          <path d="M24 7l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5zm12 21l1.2 3 3 1.2-3 1.2-1.2 3-1.2-3-3-1.2 3-1.2 1.2-3zM10 28l1.2 3 3 1.2-3 1.2-1.2 3-1.2-3-3-1.2 3-1.2 1.2-3z"/>
+      <div className="self-stretch w-[72px] sm:w-[80px] rounded-xl bg-[#E0F2FE] flex items-center justify-center shrink-0 overflow-hidden">
+        <svg viewBox="0 0 48 48" className="w-9 h-9 sm:w-10 sm:h-10 text-sky-600 fill-current" aria-hidden="true">
+          <circle cx="24" cy="22" r="11" opacity="0.8" />
+          <path d="M24 7l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5zm12 21l1.2 3 3 1.2-3 1.2-1.2 3-1.2-3-3-1.2 3-1.2 1.2-3zM10 28l1.2 3 3 1.2-3 1.2-1.2 3-1.2-3-3-1.2 3-1.2 1.2-3z" />
         </svg>
       </div>
     );
   }
 
-  // Default: Men's Haircut styling (matches mint green avatar from the reference image)
+  // Default: Men's Haircut styling
   return (
-    <div className="w-28 h-28 sm:w-[135px] sm:h-[135px] rounded-md bg-[#D1FAE5] flex items-center justify-center shrink-0 overflow-hidden">
-      <svg viewBox="0 0 48 48" className="w-16 h-16 sm:w-20 sm:h-20 text-emerald-700 fill-current" aria-hidden="true">
+    <div className="self-stretch w-[72px] sm:w-[80px] rounded-xl bg-[#D1FAE5] flex items-center justify-center shrink-0 overflow-hidden">
+      <svg viewBox="0 0 48 48" className="w-9 h-9 sm:w-10 sm:h-10 text-emerald-700 fill-current" aria-hidden="true">
         <path d="M26 8c-6.6 0-11 4.5-11 10.5 0 2.2.8 4.2 2 5.8v4.7c0 1.7 1.3 3 3 3h7c1.7 0 3-1.3 3-3v-4.7c1.2-1.6 2-3.6 2-5.8C32 12.5 27.6 8 26 8zm-8 7c1-3 3.5-5 6.5-5 4 0 7 2.5 7.5 6.5-2.5-.5-5.5-.5-8.5 1-2 1-3.5 2.5-4.5 4.5-.5-2.5-.5-5-1-7z" />
-        <path d="M19 28c-.5 2-1 4.5-1 6.5 0 2.2 1.8 4 4 4h7c2.2 0 4-1.8 4-4 0-2-.5-4.5-1-6.5h-13z" opacity="0.6"/>
+        <path d="M19 28c-.5 2-1 4.5-1 6.5 0 2.2 1.8 4 4 4h7c2.2 0 4-1.8 4-4 0-2-.5-4.5-1-6.5h-13z" opacity="0.6" />
       </svg>
     </div>
   );
@@ -83,7 +80,7 @@ function ServiceImage({ service }) {
 
   if (imageUrl && !imgError) {
     return (
-      <div className="w-28 h-28 sm:w-[135px] sm:h-[135px] rounded-md bg-slate-100 overflow-hidden shrink-0 border border-slate-200/60 shadow-2xs">
+      <div className="self-stretch w-[72px] sm:w-[80px] rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-200/60 shadow-2xs">
         <img
           src={imageUrl}
           alt={service?.name || 'Service'}
@@ -126,19 +123,56 @@ export default function ServicesTab({
   payError = '',
   onPayNow,
 }) {
+  const [selectedGender, setSelectedGender] = useState('MEN');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Available categories derived dynamically from services fetched from the backend
-  const presentCategories = useMemo(() => {
-    const set = new Set(services.map((s) => s.category).filter(Boolean));
-    // Ensure primary standard categories are represented if present in list
-    return Array.from(set);
-  }, [services]);
+  // 1. Gender-specific services (defaults to MEN)
+  const genderFilteredServices = useMemo(() => {
+    return services.filter((service) => {
+      const g = (service.gender || '').toUpperCase();
+      const name = (service.name || '').toLowerCase();
+      const isWomen =
+        name.includes('women') ||
+        name.includes('female') ||
+        name.includes('girl') ||
+        name.includes('lady');
 
-  // Filtered services sorted in ascending order by id
+      if (selectedGender === 'WOMEN') {
+        return (
+          g === 'WOMEN' ||
+          g === 'UNISEX' ||
+          g === 'ALL' ||
+          (!g && isWomen)
+        );
+      }
+
+      // Default: MEN
+      return (
+        g === 'MEN' ||
+        g === 'UNISEX' ||
+        g === 'ALL' ||
+        (!g && !isWomen)
+      );
+    });
+  }, [services, selectedGender]);
+
+  // 2. Categories derived dynamically from current gender's services
+  const presentCategories = useMemo(() => {
+    const set = new Set(genderFilteredServices.map((s) => s.category).filter(Boolean));
+    return Array.from(set);
+  }, [genderFilteredServices]);
+
+  // 3. Reset category if switching gender renders current category empty
+  useEffect(() => {
+    if (selectedCategory !== 'ALL' && !presentCategories.includes(selectedCategory)) {
+      setSelectedCategory('ALL');
+    }
+  }, [selectedGender, presentCategories, selectedCategory]);
+
+  // 4. Filtered services sorted in ascending order by id
   const filteredServices = useMemo(() => {
-    return [...services]
+    return [...genderFilteredServices]
       .sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0))
       .filter((service) => {
         const matchesCategory =
@@ -150,91 +184,71 @@ export default function ServicesTab({
             service.description.toLowerCase().includes(searchQuery.toLowerCase()));
         return matchesCategory && matchesSearch;
       });
-  }, [services, selectedCategory, searchQuery]);
+  }, [genderFilteredServices, selectedCategory, searchQuery]);
 
   return (
     <div className="pb-28 lg:pb-6 font-sans">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
         {/* Left Column: Services Catalog */}
-        <div className="lg:col-span-7 xl:col-span-8">
-          {/* 1. Search Bar (Full rounded pill input matching reference image) */}
-          <div className="relative mb-3">
-            <Search
-              size={18}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-            <input
-              type="text"
-              placeholder="Search haircut, beard, facial, styling..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-10 py-3 bg-white border border-slate-200/90 rounded-full text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-2xs transition"
-            />
-            {searchQuery && (
+        <div className="lg:col-span-7 xl:col-span-8 min-w-0">
+          {/* Combined Gender Toggle (Left) & Search Bar (Right) Row */}
+          <div className="flex items-center gap-2 sm:gap-3 mb-3.5 sm:mb-4">
+            {/* 1. Men / Women Gender Toggle */}
+            <div className="inline-flex p-1 bg-white border border-slate-200/90 rounded-xl shadow-2xs gap-1 items-center shrink-0">
               <button
                 type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-              >
-                <X size={15} />
-              </button>
-            )}
-          </div>
-
-          {/* 2. Category horizontal pills (matching reference image) */}
-          <div className="flex gap-2 overflow-x-auto pb-1 mb-3 hide-scrollbar">
-            <button
-              type="button"
-              onClick={() => setSelectedCategory('ALL')}
-              className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-colors duration-150 cursor-pointer shrink-0 ${
-                selectedCategory === 'ALL'
-                  ? 'bg-[#0B2524] text-white shadow-2xs'
-                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              All Services
-            </button>
-
-            {/* Standard Category Pills */}
-            {(presentCategories.length > 0
-              ? presentCategories
-              : ['HAIRCUT', 'BEARD', 'HAIR_COLOR', 'FACIAL']
-            ).map((cat) => {
-              const label =
-                CATEGORY_META[cat]?.label ||
-                cat.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
-              const active = selectedCategory === cat;
-              return (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-colors duration-150 cursor-pointer shrink-0 ${
-                    active
-                      ? 'bg-[#0B2524] text-white shadow-2xs'
-                      : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                id="toggle-men-services"
+                onClick={() => setSelectedGender('MEN')}
+                aria-label="Men's Services"
+                className={`px-3.5 sm:px-5 py-2 rounded-lg text-xs sm:text-sm font-bold tracking-wider transition-all duration-200 cursor-pointer ${selectedGender === 'MEN'
+                  ? 'bg-slate-100 text-slate-900 border border-black/30 shadow-2xs'
+                  : 'bg-transparent text-slate-400 hover:text-slate-600 border border-transparent'
                   }`}
+              >
+                MEN
+              </button>
+
+              <button
+                type="button"
+                id="toggle-women-services"
+                onClick={() => setSelectedGender('WOMEN')}
+                aria-label="Women's Services"
+                className={`px-3.5 sm:px-5 py-2 rounded-lg text-xs sm:text-sm font-bold tracking-wider transition-all duration-200 cursor-pointer ${selectedGender === 'WOMEN'
+                  ? 'bg-pink-50 text-pink-500 border border-pink-200/90 shadow-2xs'
+                  : 'bg-transparent text-slate-400 hover:text-slate-600 border border-transparent'
+                  }`}
+              >
+                WOMEN
+              </button>
+            </div>
+
+            {/* 2. Search Bar */}
+            <div className="relative flex-1 min-w-0">
+              <Search
+                size={17}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+              />
+              <input
+                type="text"
+                placeholder="Search services, haircuts, styling..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-9 py-2.5 bg-white border border-slate-200/90 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-2xs transition"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 cursor-pointer"
                 >
-                  {label}
+                  <X size={15} />
                 </button>
-              );
-            })}
+              )}
+            </div>
           </div>
 
-          {/* 3. Status Header: count + selected badge */}
-          <div className="flex items-center justify-between my-3 px-1">
-            <span className="text-xs sm:text-sm font-semibold text-slate-500">
-              {filteredServices.length} {filteredServices.length === 1 ? 'service' : 'services'} available
-            </span>
-            {selectedServices.length > 0 && (
-              <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-3 py-1 rounded-full text-xs font-bold">
-                <Check size={13} strokeWidth={2.5} />
-                {selectedServices.length} chosen
-              </span>
-            )}
-          </div>
 
-          {/* 4. Services List Cards Stack */}
+          {/* 3. Services List: 2-Row Horizontal Scroll Grid */}
           {servicesLoading ? (
             <div className="py-16 text-center text-slate-400 bg-white rounded-3xl border border-slate-100 p-6">
               <div className="w-8 h-8 border-2 border-emerald-500/20 border-t-emerald-600 rounded-full animate-spin mx-auto mb-2" />
@@ -247,7 +261,16 @@ export default function ServicesTab({
               <p className="text-xs mt-0.5">Try a different category or search term.</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div
+              className={`grid ${filteredServices.length === 1 ? 'grid-rows-1' : 'grid-rows-2'
+                } grid-flow-col auto-cols-[230px] sm:auto-cols-[260px] gap-2.5 sm:gap-3 overflow-x-auto pb-3 pt-1 hide-scrollbar scroll-smooth overscroll-x-contain`}
+              style={{
+                gridTemplateRows:
+                  filteredServices.length === 1
+                    ? 'repeat(1, minmax(88px, 1fr))'
+                    : 'repeat(2, minmax(88px, 1fr))',
+              }}
+            >
               {filteredServices.map((service) => {
                 const isSelected = selectedServices.some((s) => s.id === service.id);
 
@@ -255,57 +278,42 @@ export default function ServicesTab({
                   <div
                     key={service.id}
                     onClick={() => onToggleService(service)}
-                    className={`p-1 sm:p-1.5 pr-3.5 sm:pr-4 rounded-lg transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 sm:gap-3.5 select-none ${
-                      isSelected
-                        ? 'bg-white border border-black shadow-xs'
-                        : 'bg-white border border-slate-200/90 hover:border-slate-300 shadow-2xs'
-                    }`}
+                    className={`p-1 sm:p-1.5 pr-3 sm:pr-3.5 rounded-2xl transition-all duration-150 cursor-pointer flex items-center gap-2.5 sm:gap-3 select-none shrink-0 h-[88px] sm:h-[96px] ${isSelected
+                      ? 'bg-slate-900/[0.04] border border-black/40 shadow-xs'
+                      : 'bg-white border border-slate-200/90 hover:border-slate-300 shadow-2xs hover:shadow-xs'
+                      }`}
                   >
-                    {/* Left Service Image (pulls imageUrl from backend response, with fallback to category avatar) */}
+                    {/* Left Compact Service Image / Avatar - minimal margin from left, top, bottom */}
                     <ServiceImage service={service} />
 
-                    {/* Middle Info Details */}
-                    <div className="min-w-0 flex-1 py-1">
-                      <h3 className="font-display font-semibold text-base sm:text-lg text-slate-900 tracking-tight leading-snug truncate">
+                    {/* Middle Info Details - maximum space for texts */}
+                    <div className="min-w-0 flex-1 flex flex-col justify-center py-0.5 gap-0.5">
+                      <h3
+                        className="font-body font-normal text-sm sm:text-[15px] text-black tracking-tight leading-snug truncate"
+                        title={service.name}
+                      >
                         {service.name}
                       </h3>
-                      <p className="font-body text-xs sm:text-sm text-slate-500 font-normal leading-relaxed mt-0.5 line-clamp-2">
-                        {service.description || 'Classic & modern styles'}
-                      </p>
+                      {service.description && (
+                        <p
+                          className="font-body text-xs text-slate-500 font-normal leading-normal truncate"
+                          title={service.description}
+                        >
+                          {service.description}
+                        </p>
+                      )}
 
-                      {/* Time and Price row with stylish typography */}
-                      <div className="flex items-center gap-2 sm:gap-2.5 mt-2">
-                        <span className="inline-flex items-center gap-1 font-body text-xs font-medium text-slate-500 bg-slate-100/90 px-2 py-0.5 rounded">
-                          <Clock size={12} className="text-slate-400 shrink-0" />
-                          <span>{service.durationMinutes} min</span>
+                      {/* Time and Price row */}
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="inline-flex items-center gap-1 font-body text-xs font-medium text-slate-500 bg-slate-100/90 px-1.5 py-0.5 rounded shrink-0 leading-normal">
+                          <Clock size={11} className="text-slate-400 shrink-0" />
+                          <span>{service.durationMinutes}m</span>
                         </span>
-                        <span className="text-slate-300 font-light">•</span>
-                        <span className="font-display font-bold text-base sm:text-lg text-slate-900 tracking-tight">
+                        <span className="font-body font-normal text-sm sm:text-base text-black tracking-tight leading-normal">
                           ₹{service.price}
                         </span>
                       </div>
                     </div>
-
-                    {/* Right Circular Action Button */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleService(service);
-                      }}
-                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition shrink-0 cursor-pointer ${
-                        isSelected
-                          ? 'bg-black text-white shadow-2xs'
-                          : 'border border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                      }`}
-                      title={isSelected ? 'Remove service' : 'Add service'}
-                    >
-                      {isSelected ? (
-                        <Check size={18} strokeWidth={3} />
-                      ) : (
-                        <Plus size={18} strokeWidth={2} />
-                      )}
-                    </button>
                   </div>
                 );
               })}

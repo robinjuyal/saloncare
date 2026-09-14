@@ -1,132 +1,91 @@
 import React from 'react';
-import { Scissors, Users, Star, Info } from 'lucide-react';
+import { Scissors, Star, Info } from 'lucide-react';
 
 export default function TabBar({
   activeTab,
   onTabChange,
-  queueCount = 0,
   rating = 5.0,
   selectedServicesCount = 0,
 }) {
   return (
-    <div className="grid grid-cols-4 gap-2 sm:gap-3 mb-4 font-sans">
-      {/* 1. Services */}
-      <button
-        type="button"
-        onClick={() => onTabChange('services')}
-        className={`p-3 sm:p-4 rounded-2xl sm:rounded-3xl transition-all duration-150 cursor-pointer select-none text-center flex flex-col items-center justify-center relative ${
-          activeTab === 'services'
-            ? 'bg-[#0B2524] text-white shadow-md'
-            : 'bg-white border border-slate-100/90 text-slate-700 hover:border-slate-200 shadow-xs'
-        }`}
-      >
-        <div className="relative">
-          <Scissors
-            size={20}
-            className={activeTab === 'services' ? 'text-white' : 'text-slate-700'}
-          />
-          {selectedServicesCount > 0 && activeTab !== 'services' && (
-            <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white"></span>
-          )}
-        </div>
-        <span className="text-xs sm:text-sm font-bold mt-1.5 leading-tight">
-          Services
-        </span>
-        {activeTab === 'services' ? (
-          <span className="w-6 h-1 bg-emerald-400 rounded-full mt-1.5"></span>
-        ) : (
-          <span className="w-6 h-1 bg-transparent mt-1.5"></span>
-        )}
-      </button>
-
-      {/* 2. In Line */}
-      <button
-        type="button"
-        onClick={() => onTabChange('queue')}
-        className={`p-3 sm:p-4 rounded-2xl sm:rounded-3xl transition-all duration-150 cursor-pointer select-none text-center flex flex-col items-center justify-center relative ${
-          activeTab === 'queue'
-            ? 'bg-[#0B2524] text-white shadow-md'
-            : 'bg-white border border-slate-100/90 text-slate-700 hover:border-slate-200 shadow-xs'
-        }`}
-      >
-        <div className="relative inline-flex items-center justify-center">
-          <Users
-            size={20}
-            className={activeTab === 'queue' ? 'text-emerald-400' : 'text-emerald-600'}
-          />
-          <span className="absolute -top-1.5 -right-2 bg-emerald-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center ring-2 ring-white">
-            {queueCount}
-          </span>
-        </div>
-        <span className="text-xs sm:text-sm font-semibold mt-1.5 leading-tight">
-          In Line
-        </span>
-        {activeTab === 'queue' ? (
-          <span className="w-6 h-1 bg-emerald-400 rounded-full mt-1.5"></span>
-        ) : (
-          <span className="w-6 h-1 bg-transparent mt-1.5"></span>
-        )}
-      </button>
-
-      {/* 3. Reviews */}
-      <button
-        type="button"
-        onClick={() => onTabChange('reviews')}
-        className={`p-3 sm:p-4 rounded-2xl sm:rounded-3xl transition-all duration-150 cursor-pointer select-none text-center flex flex-col items-center justify-center relative ${
-          activeTab === 'reviews'
-            ? 'bg-[#0B2524] text-white shadow-md'
-            : 'bg-white border border-slate-100/90 text-slate-700 hover:border-slate-200 shadow-xs'
-        }`}
-      >
-        <Star
-          size={20}
-          className={
-            activeTab === 'reviews'
-              ? 'text-amber-400 fill-amber-400'
-              : 'text-slate-700'
-          }
-        />
-        <span className="text-xs sm:text-sm font-semibold mt-1.5 leading-tight">
-          Reviews
-        </span>
-        <span
-          className={`text-[11px] font-bold mt-0.5 leading-none ${
-            activeTab === 'reviews' ? 'text-emerald-300' : 'text-emerald-600'
+    <div className="w-full max-w-md sm:max-w-lg mx-auto font-sans">
+      <div className="grid grid-cols-3 gap-1 p-1 bg-white border border-slate-200/90 rounded-2xl shadow-2xs">
+        {/* 1. Services */}
+        <button
+          type="button"
+          id="tab-services"
+          onClick={() => onTabChange('services')}
+          className={`py-2 px-2 sm:px-3 rounded-xl transition-all duration-150 cursor-pointer select-none flex items-center justify-center gap-1.5 sm:gap-2 relative ${
+            activeTab === 'services'
+              ? 'bg-[#0B2524] text-white shadow-sm font-bold'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'
           }`}
         >
-          {rating ? Number(rating).toFixed(1) : '5.0'} ★
-        </span>
-        {activeTab === 'reviews' ? (
-          <span className="w-6 h-1 bg-emerald-400 rounded-full mt-1"></span>
-        ) : (
-          <span className="w-6 h-1 bg-transparent mt-1"></span>
-        )}
-      </button>
+          <div className="relative shrink-0 flex items-center">
+            <Scissors
+              size={18}
+              className={activeTab === 'services' ? 'text-white' : 'text-slate-600'}
+            />
+            {selectedServicesCount > 0 && activeTab !== 'services' && (
+              <span className="absolute -top-1 -right-1.5 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white" />
+            )}
+          </div>
+          <span className="text-xs sm:text-sm tracking-tight truncate">
+            Services
+          </span>
+        </button>
 
-      {/* 4. About */}
-      <button
-        type="button"
-        onClick={() => onTabChange('about')}
-        className={`p-3 sm:p-4 rounded-2xl sm:rounded-3xl transition-all duration-150 cursor-pointer select-none text-center flex flex-col items-center justify-center relative ${
-          activeTab === 'about'
-            ? 'bg-[#0B2524] text-white shadow-md'
-            : 'bg-white border border-slate-100/90 text-slate-700 hover:border-slate-200 shadow-xs'
-        }`}
-      >
-        <Info
-          size={20}
-          className={activeTab === 'about' ? 'text-white' : 'text-slate-700'}
-        />
-        <span className="text-xs sm:text-sm font-semibold mt-1.5 leading-tight">
-          About
-        </span>
-        {activeTab === 'about' ? (
-          <span className="w-6 h-1 bg-emerald-400 rounded-full mt-1.5"></span>
-        ) : (
-          <span className="w-6 h-1 bg-transparent mt-1.5"></span>
-        )}
-      </button>
+        {/* 2. Reviews */}
+        <button
+          type="button"
+          id="tab-reviews"
+          onClick={() => onTabChange('reviews')}
+          className={`py-2 px-2 sm:px-3 rounded-xl transition-all duration-150 cursor-pointer select-none flex items-center justify-center gap-1.5 sm:gap-2 relative ${
+            activeTab === 'reviews'
+              ? 'bg-[#0B2524] text-white shadow-sm font-bold'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'
+          }`}
+        >
+          <Star
+            size={18}
+            className={`shrink-0 ${
+              activeTab === 'reviews'
+                ? 'text-amber-400 fill-amber-400'
+                : 'text-slate-500'
+            }`}
+          />
+          <span className="text-xs sm:text-sm tracking-tight truncate">
+            Reviews
+          </span>
+          <span
+            className={`text-[11px] font-bold leading-none ${
+              activeTab === 'reviews' ? 'text-emerald-300' : 'text-emerald-600'
+            }`}
+          >
+            {rating ? Number(rating).toFixed(1) : '5.0'}★
+          </span>
+        </button>
+
+        {/* 3. About */}
+        <button
+          type="button"
+          id="tab-about"
+          onClick={() => onTabChange('about')}
+          className={`py-2 px-2 sm:px-3 rounded-xl transition-all duration-150 cursor-pointer select-none flex items-center justify-center gap-1.5 sm:gap-2 relative ${
+            activeTab === 'about'
+              ? 'bg-[#0B2524] text-white shadow-sm font-bold'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'
+          }`}
+        >
+          <Info
+            size={18}
+            className={`shrink-0 ${activeTab === 'about' ? 'text-white' : 'text-slate-600'}`}
+          />
+          <span className="text-xs sm:text-sm tracking-tight truncate">
+            About
+          </span>
+        </button>
+      </div>
     </div>
   );
 }
-

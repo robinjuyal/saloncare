@@ -19,5 +19,6 @@ public class ServiceResponse {
     private Integer durationMinutes;
     private String category;
     private String imageUrl;
+    private String gender;
     private Boolean active;
 }

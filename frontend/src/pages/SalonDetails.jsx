@@ -7,7 +7,6 @@ import { ArrowLeft, AlertCircle, Ticket, Clock, ArrowRight, X } from 'lucide-rea
 import SalonHeader from '../components/salon/SalonHeader';
 import TabBar from '../components/salon/TabBar';
 import ServicesTab from '../components/salon/ServicesTab';
-import WaitingLineTab from '../components/salon/WaitingLineTab';
 import ReviewsTab from '../components/salon/ReviewsTab';
 import AboutTab from '../components/salon/AboutTab';
 import BookingSuccessModal from '../components/salon/BookingSuccessModal';
@@ -101,9 +100,20 @@ export default function SalonDetails() {
       // Strictly sort services in ascending order by service ID
       const sorted = [...list].sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
       setServices(sorted);
-      // Auto-select first service for immediate arrival calculation
+      // Auto-select first Men service for immediate arrival calculation (matching default Men toggle)
       if (sorted.length > 0 && selectedServices.length === 0) {
-        setSelectedServices([sorted[0]]);
+        const firstMen =
+          sorted.find((s) => {
+            const g = (s.gender || '').toUpperCase();
+            const n = (s.name || '').toLowerCase();
+            return (
+              g === 'MEN' ||
+              g === 'UNISEX' ||
+              g === 'ALL' ||
+              (!g && !n.includes('women') && !n.includes('female'))
+            );
+          }) || sorted[0];
+        setSelectedServices([firstMen]);
       }
     } catch (e) {
       console.error(e);
@@ -358,28 +368,29 @@ export default function SalonDetails() {
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-slate-800 hover:text-slate-950 font-bold mb-3.5 transition text-sm sm:text-base cursor-pointer"
+          className="flex items-center gap-2 text-slate-500 hover:text-slate-700 font-bold mb-3.5 transition text-base sm:text-lg cursor-pointer"
         >
-          <ArrowLeft size={18} className="text-slate-800" />
+          <ArrowLeft size={20} className="text-slate-500" />
           <span>Back to Salons</span>
         </button>
 
-        {/* Salon Header with verified badge and stat strip */}
+        {/* Salon Header with stat strip */}
         <SalonHeader
           salon={salon}
           waitMinutes={waitMinutes}
           queueLength={queue.filter((q) => q.status === 'WAITING').length}
-          onSelectTab={setActiveTab}
         />
 
-        {/* 4-column balanced tabs */}
+        {/* 3-column balanced tabs: Services, Reviews, About */}
         <TabBar
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          queueCount={queue.filter((q) => q.status === 'WAITING').length}
           rating={salon.rating}
           selectedServicesCount={selectedServices.length}
         />
+
+        {/* Divider line between tabs and service search / tab content */}
+        <div className="border-b border-slate-200/80 my-3.5 sm:my-4" />
 
         {/* Tab 1: Services */}
         {activeTab === 'services' && (
@@ -397,16 +408,6 @@ export default function SalonDetails() {
             payState={payState}
             payError={payError}
             onPayNow={handlePayNow}
-          />
-        )}
-
-        {/* Tab 2: In Line (Waiting Line) */}
-        {activeTab === 'queue' && (
-          <WaitingLineTab
-            queue={queue}
-            totalChairs={totalChairs}
-            waitMinutes={waitMinutes}
-            currentTime={currentTime}
           />
         )}
 
@@ -432,6 +433,7 @@ export default function SalonDetails() {
           }`}
         >
           <div
+            key={`${selectedServices.map((s) => s.id).join('-')}-${totalPrice}`}
             role="button"
             tabIndex={0}
             onClick={() => setTicketModalOpen(true)}
@@ -441,12 +443,12 @@ export default function SalonDetails() {
                 setTicketModalOpen(true);
               }
             }}
-            className="bg-[#f0faf5] hover:bg-[#e4f7ee] active:bg-[#dbf3e7] border border-emerald-200/90 rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 px-4 sm:px-4.5 shadow-lg shadow-emerald-950/10 flex items-center justify-between gap-3 pointer-events-auto cursor-pointer transition-all duration-150 select-none group"
+            className="animate-bottom-bar-pop bg-[#f0faf5] hover:bg-[#e4f7ee] active:bg-[#dbf3e7] border border-emerald-200/90 rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 px-4 sm:px-4.5 shadow-lg shadow-emerald-950/10 flex items-center justify-between gap-3 pointer-events-auto cursor-pointer transition-colors duration-150 select-none group"
             title="Click to view token & booking summary"
           >
             {/* Left: Ticket icon + service details (Clickable) */}
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100/80 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <div className="animate-icon-pop w-10 h-10 rounded-xl bg-emerald-100/80 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                 <Ticket size={20} className="text-emerald-600" />
               </div>
 
@@ -455,7 +457,7 @@ export default function SalonDetails() {
                   <span>{selectedServices.length} selected </span>
                   <span className="text-slate-500 font-normal">(~{totalDuration}m)</span>
                 </div>
-                <div className="font-display font-bold text-lg sm:text-xl text-slate-900 leading-tight my-0.5">
+                <div className="animate-price-pulse font-display font-bold text-lg sm:text-xl text-slate-900 leading-tight my-0.5">
                   ₹{totalPrice}
                 </div>
                 <div className="font-body text-[11px] sm:text-xs font-medium text-emerald-700 flex items-center gap-1 leading-tight">
@@ -483,7 +485,7 @@ export default function SalonDetails() {
                 e.stopPropagation();
                 setTicketModalOpen(true);
               }}
-              className="bg-[#059669] hover:bg-[#047857] active:bg-[#065f46] text-white font-body font-semibold text-xs sm:text-sm px-5 sm:px-6 py-3 sm:py-3.5 rounded-2xl shadow-sm transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+              className="bg-[#059669] hover:bg-[#047857] active:bg-[#065f46] text-white font-body font-semibold text-xs sm:text-sm px-5 sm:px-6 py-3 sm:py-3.5 rounded-2xl shadow-sm transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 shrink-0 group-hover:shadow-md"
             >
               <span>Book Now</span>
               <ArrowRight size={15} />
@@ -536,7 +538,7 @@ export default function SalonDetails() {
           booking={successBooking}
           onTrackQueue={() => {
             setSuccessBooking(null);
-            setActiveTab('queue');
+            navigate('/my-bookings');
           }}
           onViewMyBookings={() => {
             setSuccessBooking(null);

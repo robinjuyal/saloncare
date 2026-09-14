@@ -53,6 +53,9 @@ public class ServiceService {
 
         verifySalonOwnership(salon, callerId);
 
+        if (serviceRequest.getGender() == null) {
+            serviceRequest.setGender(Service.TargetGender.MEN);
+        }
         serviceRequest.setSalon(salon);
         serviceRequest.setActive(true);
         
@@ -72,6 +75,12 @@ public class ServiceService {
         service.setPrice(serviceRequest.getPrice());
         service.setDurationMinutes(serviceRequest.getDurationMinutes());
         service.setCategory(serviceRequest.getCategory());
+        if (serviceRequest.getGender() != null) {
+            service.setGender(serviceRequest.getGender());
+        }
+        if (serviceRequest.getImageUrl() != null) {
+            service.setImageUrl(serviceRequest.getImageUrl());
+        }
         
         Service updated = serviceRepository.save(service);
         return mapToResponse(updated);
@@ -89,6 +98,16 @@ public class ServiceService {
     }
     
     private ServiceResponse mapToResponse(Service service) {
+        Service.TargetGender effectiveGender = service.getGender();
+        if (effectiveGender == null) {
+            String name = (service.getName() != null ? service.getName().toLowerCase() : "");
+            if (name.contains("women") || name.contains("female") || name.contains("girl") || name.contains("lady")) {
+                effectiveGender = Service.TargetGender.WOMEN;
+            } else {
+                effectiveGender = Service.TargetGender.MEN;
+            }
+        }
+
         return ServiceResponse.builder()
                 .id(service.getId())
                 .name(service.getName())
@@ -97,6 +116,7 @@ public class ServiceService {
                 .durationMinutes(service.getDurationMinutes())
                 .category(service.getCategory().name())
                 .imageUrl(service.getImageUrl())
+                .gender(effectiveGender.name())
                 .active(service.getActive())
                 .build();
     }
